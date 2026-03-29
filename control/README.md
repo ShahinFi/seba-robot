@@ -24,7 +24,7 @@ The control inputs are the wheel torques
 
 ## 2. Nonlinear Dynamics
 
-M(q) q̈ + C_q(q, q̇) q̇ + D q̇ + G(q) = B_τ τ
+M(q) q̈ + C_q(q, q̇) q̇ + D_q q̇ + G(q) = B_τ τ
 
 ---
 
@@ -53,7 +53,7 @@ C_q =
 ### Damping Matrix
 
 ```text
-D =
+D_q =
 [  2*c/rw²   -2*c/rw    0
   -2*c/rw     2*c       0
    0          0         (d²/(2*rw²))*c ]
@@ -85,7 +85,7 @@ B_τ =
 
 ## 3. Explicit Nonlinear Acceleration Model
 
-q̈ = M⁻¹ * ( B_τ τ - C_q q̇ - D q̇ - G )
+q̈ = M⁻¹ * ( B_τ τ - C_q q̇ - D_q q̇ - G )
 
 which gives
 
@@ -121,19 +121,7 @@ cos(tp) ≈ 1
 
 ---
 
-## 6. Output
-
-```text
-C =
-[ 1  0  0  0
-  0  0  0  1 ]
-```
-
-Y = [ ẋ, d(tb)/dt ]ᵀ
-
----
-
-## 7. State Space
+## 6. State Space
 
 U = [ TL, TR ]ᵀ
 
@@ -149,6 +137,14 @@ B =
   B2
   B3
   B4 ]
+
+C =
+[ 1  0  0  0
+  0  0  0  1 ]
+
+D =
+[ 0  0
+  0  0 ]
 ```
 
 with
@@ -156,9 +152,14 @@ with
 A2 = [ 0  0  1  0 ]
 B2 = [ 0  0 ]
 
+The linearized plant is
+
+Ẋ = A X + B U
+Y  = C X + D U
+
 ---
 
-## 8. Augmented Servo Model
+## 7. Augmented Servo Model
 
 ```text
 X̃ =
@@ -176,19 +177,25 @@ Ã =
   0_(4x2)   A_(4x4) ]
 
 B̃ =
-[ 0_(2x2)
+[ D_(2x2)
   B_(4x2) ]
 ```
 
+The augmented system is
+
+X̃̇ = Ã X̃ + B̃ U
+
 ---
 
-## 9. Control Law
+## 8. Control Law
 
 U = -Kc * X̃
 
+Kc is the 2×6 state-feedback gain matrix obtained by solving the continuous-time Algebraic Riccati Equation (CARE) for the augmented system.
+
 ---
 
-## 10. Summary
+## 9. Summary
 
 1. Full nonlinear dynamics
 2. Solve accelerations
