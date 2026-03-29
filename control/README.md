@@ -1,4 +1,4 @@
-# SEBA-BOT — Dynamics and State-Space Model (Velocity Control Mode)
+# SEBA-ROBOT — Dynamics and State-Space Model (Velocity Control Mode)
 
 Note: The nonlinear dynamic model is adapted from established two-wheeled inverted pendulum formulations (see References). All state-space derivation and control design are developed independently.
 
