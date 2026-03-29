@@ -1,5 +1,7 @@
 # SEBA-BOT — Dynamics and State-Space Model (Velocity Control Mode)
 
+Note: The nonlinear dynamic model is adapted from established two-wheeled inverted pendulum formulations (see References). All state-space derivation and control design are developed independently.
+
 ## 1. Generalized Coordinates
 
 The robot is described by the generalized coordinates
@@ -197,3 +199,9 @@ U = -Kc * X̃
 7. Apply LQR
 
 Final system: augmented 6-state velocity tracking model
+
+---
+
+## References
+
+- S. Kim and S. J. Kwon, "Dynamic Modeling of a Two-wheeled Inverted Pendulum Balancing Mobile Robot," *International Journal of Control, Automation and Systems*, vol. 13, no. 4, pp. 926–933, 2015.
