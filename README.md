@@ -1,6 +1,6 @@
-# SEBA-BOT
+# SEBA-ROBOT
 
-SEBA-BOT is a two-wheeled self-balancing robotic platform for control, autonomy, and real-time robotics development.
+SEBA-ROBOT is a two-wheeled self-balancing robotic platform for control, autonomy, and real-time robotics development.
 
 ## Overview
 
