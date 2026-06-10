@@ -47,22 +47,22 @@ where:
 
 | Symbol | Meaning |
 |---|---|
-| `x` | forward position of the wheel axle midpoint |
-| `theta` | body pitch angle measured from the upright equilibrium |
-| `psi` | yaw angle |
-| `x_dot` | forward velocity |
-| `theta_dot` | pitch angular velocity |
-| `psi_dot` | yaw angular velocity |
+| $x$ | forward position of the wheel axle midpoint |
+| $\theta$ | body pitch angle measured from the upright equilibrium |
+| $\psi$ | yaw angle |
+| $\dot{x}$ | forward velocity |
+| $\dot{\theta}$ | pitch angular velocity |
+| $\dot{\psi}$ | yaw angular velocity |
 
 The sign conventions are:
 
 | Quantity | Positive direction |
 |---|---|
-| `x` | forward |
-| `theta` | body leans forward from the upright position |
-| `psi` | positive yaw according to the right-hand rule about the vertical axis |
-| `T_L`, `T_R` | wheel-side torques that drive the corresponding wheel forward |
-| `psi_dot` | positive yaw rate according to the sign convention of `psi` |
+| $x$ | forward |
+| $\theta$ | body leans forward from the upright position |
+| $\psi$ | positive yaw according to the right-hand rule about the vertical axis |
+| $T_L$, $T_R$ | wheel-side torques that drive the corresponding wheel forward |
+| $\dot{\psi}$ | positive yaw rate according to the sign convention of $\psi$ |
 
 The wheel-torque input vector is
 
@@ -74,7 +74,7 @@ T_R
 \end{bmatrix}
 ```
 
-where `T_L` and `T_R` are wheel-side torques at the wheel axle after gearbox reduction.
+where $T_L$ and $T_R$ are wheel-side torques at the wheel axle after gearbox reduction.
 
 ---
 
@@ -82,20 +82,20 @@ where `T_L` and `T_R` are wheel-side torques at the wheel axle after gearbox red
 
 | Symbol | Meaning |
 |---|---|
-| `m_p` | body mass |
-| `m_w` | mass of one wheel |
-| `l_p` | distance from wheel axle to body center of mass |
-| `r_w` | wheel radius |
-| `W` | wheel separation, measured from left wheel contact center to right wheel contact center |
-| `I_px` | body moment of inertia about the body roll axis |
-| `I_py` | body moment of inertia about the body pitch axis |
-| `I_pz` | body moment of inertia about the body yaw axis |
-| `I_w` | wheel moment of inertia about the rolling axis |
-| `J_w` | wheel moment of inertia about the vertical/yaw axis |
-| `c` | viscous damping coefficient associated with wheel rotation |
-| `g` | gravitational acceleration |
+| $m_p$ | body mass |
+| $m_w$ | mass of one wheel |
+| $l_p$ | distance from wheel axle to body center of mass |
+| $r_w$ | wheel radius |
+| $W$ | wheel separation, measured from left wheel contact center to right wheel contact center |
+| $I_{px}$ | body moment of inertia about the body roll axis |
+| $I_{py}$ | body moment of inertia about the body pitch axis |
+| $I_{pz}$ | body moment of inertia about the body yaw axis |
+| $I_w$ | wheel moment of inertia about the rolling axis |
+| $J_w$ | wheel moment of inertia about the vertical/yaw axis |
+| $c$ | viscous damping coefficient associated with wheel rotation |
+| $g$ | gravitational acceleration |
 
-The symbol `W` is used for wheel separation to avoid confusion with the differential operator `d/dt`.
+The symbol $W$ is used for wheel separation to avoid confusion with the differential operator $d/dt$.
 
 ---
 
@@ -266,7 +266,7 @@ The first row maps wheel torques into forward generalized force.
 
 The second row represents the reaction torque applied to the body pitch coordinate by the driven wheels.
 
-The third row maps the left-right wheel torque difference into yaw generalized torque. The use of `W/(2r_w)` assumes that `W` is the full wheel separation.
+The third row maps the left-right wheel torque difference into yaw generalized torque. The use of $W/(2r_w)$ assumes that $W$ is the full wheel separation.
 
 ---
 
@@ -322,7 +322,7 @@ f_3(\dot{x},\theta,\dot{\theta},\dot{\psi},T_L,T_R).
 \end{aligned}
 ```
 
-For velocity control, absolute position `x` and absolute yaw `psi` are omitted because the model is invariant to both coordinates.
+For velocity control, absolute position $x$ and absolute yaw $\psi$ are omitted because the model is invariant to both coordinates.
 
 ---
 
@@ -557,7 +557,7 @@ CX
 DU.
 ```
 
-Unmodeled effects may be represented as bounded disturbances, but the nominal RSLQR gain is designed using `(A, B, C, D)`.
+Unmodeled effects may be represented as bounded disturbances, but the nominal RSLQR gain is designed using $(A,B,C,D)$.
 
 The control objective is upright stabilization with forward-velocity and yaw-rate tracking.
 
@@ -589,7 +589,7 @@ Y
 r.
 ```
 
-For constant command `r`,
+For constant command $r$,
 
 ```math
 \dot{e}
@@ -680,7 +680,7 @@ B
 \end{bmatrix}.
 ```
 
-Because `D = 0` for this robot model,
+Because $D=0$ for this robot model,
 
 ```math
 B_{\mathrm{aug}}
@@ -730,8 +730,8 @@ where:
 
 | Matrix | Requirement |
 |---|---|
-| `Q` | symmetric positive semidefinite |
-| `R` | symmetric positive definite |
+| $Q$ | symmetric positive semidefinite |
+| $R$ | symmetric positive definite |
 
 The gain matrix is obtained from the continuous-time algebraic Riccati equation:
 
@@ -793,7 +793,7 @@ U[k]
 T_s\mu[k]
 ```
 
-where `T_s` is the controller sample time.
+where $T_s$ is the controller sample time.
 
 The resulting torque command is
 
@@ -810,7 +810,7 @@ T_R
 
 ## 15. Input Constraints
 
-The wheel-torque command obtained by integrating `U_dot` is limited by the physical actuator range:
+The wheel-torque command obtained by integrating $\dot{U}$ is limited by the physical actuator range:
 
 ```math
 |T_L|
@@ -849,7 +849,7 @@ For a DC motor,
 ```math
 T
 \approx
-K_tI
+K_t I
 ```
 
 so the wheel-torque command is converted to a current command by
