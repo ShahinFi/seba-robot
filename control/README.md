@@ -75,15 +75,12 @@ The sign conventions are:
 | Quantity | Positive direction |
 |---|---|
 | $x$ | forward motion of the wheel axle midpoint |
-| $\dot{x}$ | forward velocity |
 | $\theta$ | body leans forward from the upright position |
-| $\dot{\theta}$ | increasing forward pitch angle |
-| $\psi$ | positive yaw according to the right-hand rule about the vertical axis |
-| $\dot{\psi}$ | increasing positive yaw angle |
-| $T_L$ | positive torque drives the left wheel forward |
-| $T_R$ | positive torque drives the right wheel forward |
+| $\psi$ | yaw according to the right-hand rule about the vertical axis |
+| $T_L$ | torque that drives the left wheel forward |
+| $T_R$ | torque that drives the right wheel forward |
 
-With this convention, equal positive wheel torques produce forward generalized force, while a left-right torque difference produces yaw generalized torque.
+Positive derivatives indicate increasing values of the corresponding coordinates. With this convention, equal positive wheel torques produce forward generalized force, while a left-right torque difference produces yaw generalized torque.
 
 ---
 
