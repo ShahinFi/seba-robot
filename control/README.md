@@ -53,16 +53,6 @@ where:
 | $\ddot{\theta}$ | pitch angular acceleration |
 | $\ddot{\psi}$ | yaw angular acceleration |
 
-The sign conventions are:
-
-| Quantity | Positive direction |
-|---|---|
-| $x$ | forward |
-| $\theta$ | body leans forward from the upright position |
-| $\psi$ | positive yaw according to the right-hand rule about the vertical axis |
-| $T_L$, $T_R$ | wheel-side torques that drive the corresponding wheel forward |
-| $\dot{\psi}$ | positive yaw rate according to the sign convention of $\psi$ |
-
 The wheel-torque input vector is
 
 ```math
@@ -73,7 +63,27 @@ T_R
 \end{bmatrix}
 ```
 
-where $T_L$ and $T_R$ are wheel-side torques at the wheel axle after gearbox reduction.
+where:
+
+| Symbol | Meaning |
+|---|---|
+| $T_L$ | left wheel-side torque at the wheel axle after gearbox reduction |
+| $T_R$ | right wheel-side torque at the wheel axle after gearbox reduction |
+
+The sign conventions are:
+
+| Quantity | Positive direction |
+|---|---|
+| $x$ | forward motion of the wheel axle midpoint |
+| $\dot{x}$ | forward velocity |
+| $\theta$ | body leans forward from the upright position |
+| $\dot{\theta}$ | increasing forward pitch angle |
+| $\psi$ | positive yaw according to the right-hand rule about the vertical axis |
+| $\dot{\psi}$ | increasing positive yaw angle |
+| $T_L$ | positive torque drives the left wheel forward |
+| $T_R$ | positive torque drives the right wheel forward |
+
+With this convention, equal positive wheel torques produce forward generalized force, while a left-right torque difference produces yaw generalized torque.
 
 ---
 
