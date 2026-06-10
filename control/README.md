@@ -452,7 +452,7 @@ v_{\mathrm{cmd}} \\
 \end{bmatrix}.
 ```
 
-The tracking error is
+To construct the augmented model, the derivative of the tracking error is needed. The tracking error is
 
 ```math
 e
@@ -462,7 +462,7 @@ Y
 r.
 ```
 
-For constant command $r$,
+Since the command $r$ is assumed constant,
 
 ```math
 \dot{e}
@@ -480,7 +480,7 @@ CX
 DU,
 ```
 
-we obtain
+the error dynamics become
 
 ```math
 \dot{e}
