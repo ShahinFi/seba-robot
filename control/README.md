@@ -276,11 +276,27 @@ The third row maps the left-right wheel torque difference into yaw generalized t
 
 ---
 
-## 9. Reduced Velocity-Control State
+## 9. State-Space Model for Control
 
-For velocity control, absolute position $x$ and absolute yaw $\psi$ are omitted because the model is invariant to both coordinates.
+For controller design, the nonlinear dynamics are converted into a reduced state-space model and then linearized around the upright stationary operating point:
 
-The reduced state vector is
+```math
+\dot{X}
+=
+AX
++
+BU,
+\qquad
+Y
+=
+CX
++
+DU.
+```
+
+Here, $X$ is the state vector, $U$ is the plant input vector, and $Y$ is the output vector. The matrices $A$, $B$, $C$, and $D$ describe the linearized plant around the chosen operating point.
+
+For velocity control, the absolute position $x$ and absolute yaw angle $\psi$ are omitted because the dynamics depend on their derivatives, not on their absolute values. The reduced state and input are chosen as
 
 ```math
 X =
@@ -289,18 +305,18 @@ v \\
 \theta \\
 \dot{\theta} \\
 \dot{\psi}
-\end{bmatrix}
+\end{bmatrix},
+\qquad
+v = \dot{x},
+\qquad
+U =
+\begin{bmatrix}
+T_L \\
+T_R
+\end{bmatrix}.
 ```
 
-where
-
-```math
-v
-=
-\dot{x}.
-```
-
-The reduced state derivative is
+The corresponding state derivative is
 
 ```math
 \dot{X}
@@ -310,48 +326,45 @@ The reduced state derivative is
 \dot{\theta} \\
 \ddot{\theta} \\
 \ddot{\psi}
+\end{bmatrix}
+=
+\begin{bmatrix}
+\ddot{x} \\
+\dot{\theta} \\
+\ddot{\theta} \\
+\ddot{\psi}
 \end{bmatrix}.
 ```
 
-Using the nonlinear acceleration model:
+The acceleration terms are obtained by solving the nonlinear dynamics for $\ddot{q}$. Therefore, before linearization, the reduced nonlinear plant may be written compactly as
 
 ```math
 \dot{X}
 =
-F(X,U)
+F(X,U).
 ```
 
-where
+The plant is linearized around the upright stationary equilibrium
 
 ```math
-U =
-\begin{bmatrix}
-T_L \\
-T_R
-\end{bmatrix}
-```
-
-and
-
-```math
-F(X,U)
+X_{\mathrm{eq}}
 =
 \begin{bmatrix}
-f_1(X,U)
-\\
-\dot{\theta}
-\\
-f_2(X,U)
-\\
-f_3(X,U)
+0 \\
+0 \\
+0 \\
+0
+\end{bmatrix},
+\qquad
+U_{\mathrm{eq}}
+=
+\begin{bmatrix}
+0 \\
+0
 \end{bmatrix}.
 ```
 
----
-
-## 10. Linearization
-
-The system is linearized around the upright stationary equilibrium:
+Equivalently,
 
 ```math
 v = 0,
@@ -367,67 +380,39 @@ T_L = 0,
 T_R = 0.
 ```
 
-with small-angle approximations:
+Using the small-angle approximations
 
 ```math
 \sin\theta \approx \theta,
 \qquad
-\cos\theta \approx 1.
+\cos\theta \approx 1,
 ```
 
-The linearized plant is
-
-```math
-\dot{X}
-=
-AX
-+
-BU
-```
-
-where
+the state matrices are defined by the Jacobians
 
 ```math
 A
 =
 \left.
 \frac{\partial F}{\partial X}
-\right|_{\mathrm{eq}},
+\right|_{X_{\mathrm{eq}},U_{\mathrm{eq}}},
 \qquad
 B
 =
 \left.
 \frac{\partial F}{\partial U}
-\right|_{\mathrm{eq}}.
+\right|_{X_{\mathrm{eq}},U_{\mathrm{eq}}}.
 ```
 
-The state and input are
-
-```math
-X =
-\begin{bmatrix}
-v \\
-\theta \\
-\dot{\theta} \\
-\dot{\psi}
-\end{bmatrix},
-\qquad
-U =
-\begin{bmatrix}
-T_L \\
-T_R
-\end{bmatrix}.
-```
-
-The second state equation is kinematic:
+The full entries of $A$ and $B$ are obtained by evaluating these Jacobians from the nonlinear dynamics. The second state equation is purely kinematic,
 
 ```math
 \frac{d\theta}{dt}
 =
-\dot{\theta}.
+\dot{\theta},
 ```
 
-Therefore, the second row of the linearized matrices is
+so the second row of the linearized matrices is known directly:
 
 ```math
 A_2
@@ -443,13 +428,7 @@ B_2
 \end{bmatrix}.
 ```
 
----
-
-## 11. Output Definition
-
-The velocity-control mode tracks forward velocity and yaw rate.
-
-The output vector is
+The output is chosen as forward velocity and yaw rate:
 
 ```math
 Y =
@@ -459,17 +438,7 @@ v \\
 \end{bmatrix}.
 ```
 
-The output equation is
-
-```math
-Y
-=
-CX
-+
-DU
-```
-
-with
+Because the outputs are directly selected from the state and do not depend directly on the wheel-torque input,
 
 ```math
 C
@@ -491,47 +460,21 @@ D
 
 ---
 
-## 12. Robust Servomechanism LQR Formulation
+## 10. Robust Servomechanism LQR Formulation
 
-The nominal linear plant is
+The RSLQR controller is designed using the nominal linear plant obtained from the linearized dynamics. Unmodeled effects may be represented as bounded disturbances, but the nominal RSLQR gain is designed using the matrices $A$, $B$, $C$, and $D$.
 
-```math
-\dot{X}
-=
-AX
-+
-BU,
-\qquad
-Y
-=
-CX
-+
-DU.
-```
-
-Unmodeled effects may be represented as bounded disturbances, but the nominal RSLQR gain is designed using $(A,B,C,D)$.
-
-The control objective is upright stabilization with forward-velocity and yaw-rate tracking.
-
-The output and constant command are
+The control objective is upright stabilization with forward-velocity and yaw-rate tracking. Let the constant command vector be
 
 ```math
-Y =
-\begin{bmatrix}
-v
-\\
-\dot{\psi}
-\end{bmatrix},
-\qquad
 r =
 \begin{bmatrix}
-v_{\mathrm{cmd}}
-\\
+v_{\mathrm{cmd}} \\
 \dot{\psi}_{\mathrm{cmd}}
 \end{bmatrix}.
 ```
 
-The tracking error is defined as
+The tracking error is
 
 ```math
 e
@@ -549,7 +492,7 @@ For constant command $r$,
 \dot{Y}.
 ```
 
-Using
+Using the output equation,
 
 ```math
 Y
@@ -569,7 +512,7 @@ C\dot{X}
 D\dot{U}.
 ```
 
-Following the robust servomechanism formulation, define the augmented state
+The robust servomechanism design model augments the tracking error with the state derivative:
 
 ```math
 Z =
@@ -577,28 +520,24 @@ Z =
 e
 \\
 \dot{X}
-\end{bmatrix}
-```
-
-and define the augmented control input as the derivative of the plant input:
-
-```math
+\end{bmatrix},
+\qquad
 \mu
 =
 \dot{U}.
 ```
 
-Since
+Differentiating the linearized state equation gives
 
 ```math
 \ddot{X}
 =
 A\dot{X}
 +
-B\dot{U}
+B\dot{U}.
 ```
 
-for the nominal linear plant, the augmented model becomes
+Thus, the augmented model is
 
 ```math
 \dot{Z}
@@ -632,7 +571,7 @@ B
 \end{bmatrix}.
 ```
 
-Because $D=0$ for this robot model,
+Since $D=0$ for this output choice,
 
 ```math
 B_{\mathrm{aug}}
@@ -644,27 +583,19 @@ B
 \end{bmatrix}.
 ```
 
-The augmented state dimension is
+The augmented state and input dimensions are
 
 ```math
-Z
-\in
-\mathbb{R}^{6}
-```
-
-and the augmented input dimension is
-
-```math
-\mu
-\in
-\mathbb{R}^{2}.
+Z \in \mathbb{R}^{6},
+\qquad
+\mu \in \mathbb{R}^{2}.
 ```
 
 ---
 
-## 13. RSLQR Control Law
+## 11. RSLQR Control Law
 
-The LQR cost function is
+The LQR cost function for the augmented system is
 
 ```math
 J
@@ -675,7 +606,7 @@ Z^TQZ
 +
 \mu^TR\mu
 \right)
-dt
+dt.
 ```
 
 where:
@@ -742,7 +673,7 @@ U[k+1]
 =
 U[k]
 +
-T_s\mu[k]
+T_s\mu[k].
 ```
 
 where $T_s$ is the controller sample time.
@@ -760,7 +691,7 @@ T_R
 
 ---
 
-## 14. Input Constraints
+## 12. Input Constraints
 
 The wheel-torque command obtained by integrating $\dot{U}$ is limited by the physical actuator range:
 
@@ -790,7 +721,7 @@ When a torque component reaches its limit, only torque-rate commands that drive 
 
 ---
 
-## 15. Actuator Assumption and Torque Tracking
+## 13. Actuator Assumption and Torque Tracking
 
 The actuator subsystem is modeled separately from the outer-loop dynamics. The motor electrical dynamics and PWM generation are handled by a faster inner current-control loop.
 
