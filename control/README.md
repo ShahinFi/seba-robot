@@ -102,51 +102,32 @@ $$
 
 Solving for acceleration gives
 
-$$
-\ddot{q}
-=
+```math
+\ddot{q} =
 M(q)^{-1}
 \left[
 B_{\tau}\tau
--
-C_q(q,\dot{q})\dot{q}
--
-D_q\dot{q}
--
-G(q)
+- C_q(q,\dot{q})\dot{q}
+- D_q\dot{q}
+- G(q)
 \right].
-$$
+```
 
 ---
 
 ## 4. Inertia Matrix
 
-$$
+```math
 M(q)=
 \begin{bmatrix}
-m_p + 2m_w + \frac{2I_w}{r_w^2}
-&
-m_p l_p \cos\theta
-&
-0
-\\
-m_p l_p \cos\theta
-&
-I_{py} + m_p l_p^2
-&
-0
-\\
-0
-&
-0
-&
+m_p + 2m_w + \frac{2I_w}{r_w^2} & m_p l_p \cos\theta & 0 \\
+m_p l_p \cos\theta & I_{py} + m_p l_p^2 & 0 \\
+0 & 0 &
 I_{pz} + 2J_w
 + \frac{\left(m_w + \frac{I_w}{r_w^2}\right)W^2}{2}
 - \left(I_{pz} - I_{px} - m_p l_p^2\right)\sin^2\theta
 \end{bmatrix}.
-$$
-
----
+```
 
 ## 5. Coriolis Matrix
 
