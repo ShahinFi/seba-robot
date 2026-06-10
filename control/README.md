@@ -276,63 +276,9 @@ The third row maps the left-right wheel torque difference into yaw generalized t
 
 ---
 
-## 9. Nonlinear State Model
-
-Define
-
-```math
-q =
-\begin{bmatrix}
-x \\
-\theta \\
-\psi
-\end{bmatrix},
-\qquad
-\dot{q} =
-\begin{bmatrix}
-\dot{x} \\
-\dot{\theta} \\
-\dot{\psi}
-\end{bmatrix},
-\qquad
-\tau =
-\begin{bmatrix}
-T_L \\
-T_R
-\end{bmatrix}.
-```
-
-Then
-
-```math
-\ddot{q}
-=
-f(q,\dot{q},\tau).
-```
-
-Component-wise,
-
-```math
-\begin{aligned}
-\ddot{x}
-&=
-f_1(\dot{x},\theta,\dot{\theta},\dot{\psi},T_L,T_R),
-\\
-\ddot{\theta}
-&=
-f_2(\dot{x},\theta,\dot{\theta},\dot{\psi},T_L,T_R),
-\\
-\ddot{\psi}
-&=
-f_3(\dot{x},\theta,\dot{\theta},\dot{\psi},T_L,T_R).
-\end{aligned}
-```
+## 9. Reduced Velocity-Control State
 
 For velocity control, absolute position $x$ and absolute yaw $\psi$ are omitted because the model is invariant to both coordinates.
-
----
-
-## 10. Reduced Velocity-Control State
 
 The reduced state vector is
 
@@ -403,7 +349,7 @@ f_3(X,U)
 
 ---
 
-## 11. Linearization
+## 10. Linearization
 
 The system is linearized around the upright stationary equilibrium:
 
@@ -499,7 +445,7 @@ B_2
 
 ---
 
-## 12. Output Definition
+## 11. Output Definition
 
 The velocity-control mode tracks forward velocity and yaw rate.
 
@@ -545,7 +491,7 @@ D
 
 ---
 
-## 13. Robust Servomechanism LQR Formulation
+## 12. Robust Servomechanism LQR Formulation
 
 The nominal linear plant is
 
@@ -716,7 +662,7 @@ and the augmented input dimension is
 
 ---
 
-## 14. RSLQR Control Law
+## 13. RSLQR Control Law
 
 The LQR cost function is
 
@@ -814,7 +760,7 @@ T_R
 
 ---
 
-## 15. Input Constraints
+## 14. Input Constraints
 
 The wheel-torque command obtained by integrating $\dot{U}$ is limited by the physical actuator range:
 
@@ -844,7 +790,7 @@ When a torque component reaches its limit, only torque-rate commands that drive 
 
 ---
 
-## 16. Actuator Assumption and Torque Tracking
+## 15. Actuator Assumption and Torque Tracking
 
 The actuator subsystem is modeled separately from the outer-loop dynamics. The motor electrical dynamics and PWM generation are handled by a faster inner current-control loop.
 
