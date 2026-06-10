@@ -404,29 +404,7 @@ B
 \right|_{X_{\mathrm{eq}},U_{\mathrm{eq}}}.
 ```
 
-The full entries of $A$ and $B$ are obtained by evaluating these Jacobians from the nonlinear dynamics. The second state equation is purely kinematic,
-
-```math
-\frac{d\theta}{dt}
-=
-\dot{\theta},
-```
-
-so the second row of the linearized matrices is known directly:
-
-```math
-A_2
-=
-\begin{bmatrix}
-0 & 0 & 1 & 0
-\end{bmatrix},
-\qquad
-B_2
-=
-\begin{bmatrix}
-0 & 0
-\end{bmatrix}.
-```
+The full entries of $A$ and $B$ are obtained by evaluating these Jacobians from the nonlinear dynamics.
 
 The output is chosen as forward velocity and yaw rate:
 
