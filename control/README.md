@@ -21,7 +21,7 @@ x \\
 \end{bmatrix}
 ```
 
-with
+The generalized velocity and acceleration vectors are
 
 ```math
 \dot{q} =
@@ -29,12 +29,8 @@ with
 \dot{x} \\
 \dot{\theta} \\
 \dot{\psi}
-\end{bmatrix}
-```
-
-and
-
-```math
+\end{bmatrix},
+\qquad
 \ddot{q} =
 \begin{bmatrix}
 \ddot{x} \\
@@ -53,6 +49,9 @@ where:
 | $\dot{x}$ | forward velocity |
 | $\dot{\theta}$ | pitch angular velocity |
 | $\dot{\psi}$ | yaw angular velocity |
+| $\ddot{x}$ | forward acceleration |
+| $\ddot{\theta}$ | pitch angular acceleration |
+| $\ddot{\psi}$ | yaw angular acceleration |
 
 The sign conventions are:
 
