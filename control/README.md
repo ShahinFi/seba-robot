@@ -143,7 +143,7 @@ Positive derivatives indicate increasing values of the corresponding coordinates
 
 ---
 
-## 3. Physical Parameters
+## 3. Rigid-Body Parameters
 
 | Symbol | Meaning |
 |---|---|
@@ -376,6 +376,8 @@ T_L \\
 T_R
 \end{bmatrix}
 ```
+
+The vector $U$ is the control-oriented notation for the same wheel-torque input vector denoted by $\tau$ in the rigid-body dynamics.
 
 The corresponding state derivative is
 
@@ -856,7 +858,7 @@ U(t)
 U(0)
 +
 \int_{0}^{t}
-\dot{U}(\tau)d\tau
+\dot{U}(\sigma)d\sigma
 ```
 
 In discrete time:
@@ -898,6 +900,8 @@ T_{\max,L},
 T_{\max,R}
 ```
 
+Here, $T_{\max,L}$ and $T_{\max,R}$ are the admissible left and right wheel-side torque limits.
+
 For symmetric limits,
 
 ```math
@@ -929,6 +933,18 @@ T_R
 ```
 
 Wheel torque is not measured directly. The actuator controller realizes $U$ by regulating motor current and generating PWM commands.
+
+The actuator model uses the following constants:
+
+| Symbol | Meaning |
+|---|---|
+| $K_{t,m}$ | motor torque constant |
+| $N$ | gearbox reduction ratio |
+| $\eta_g$ | gearbox/drivetrain efficiency |
+| $K_{t,w}$ | effective wheel-side torque constant |
+| $V_b$ | battery voltage |
+| $K_{p,I}$ | proportional current-control gain |
+| $K_{i,I}$ | integral current-control gain |
 
 For a DC motor,
 
