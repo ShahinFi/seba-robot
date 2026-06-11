@@ -1019,7 +1019,7 @@ I_{\mathrm{cmd}}
 I_{\mathrm{meas}}
 ```
 
-A PI current controller generates the commanded average motor voltage:
+A PI current controller generates the actuator voltage-control signal:
 
 ```math
 \xi_I(t)
@@ -1028,22 +1028,22 @@ A PI current controller generates the commanded average motor voltage:
 ```
 
 ```math
-V_{\mathrm{cmd}}
+V_{\mathrm{ctrl}}
 =
 K_{p,I}e_I
 +
 K_{i,I}\xi_I
 ```
 
-where $V_{\mathrm{cmd}}$ is the commanded average motor-voltage vector. For matched actuators, $K_{p,I}$ and $K_{i,I}$ may be applied componentwise to the left and right current errors.
+where $V_{\mathrm{ctrl}}$ is the average motor-voltage control vector. For matched actuators, $K_{p,I}$ and $K_{i,I}$ may be applied componentwise to the left and right current errors.
 
 The signed PWM duty command before saturation is
 
 ```math
-d_{\mathrm{cmd}}
+d
 =
 \frac{
-V_{\mathrm{cmd}}
+V_{\mathrm{ctrl}}
 }{
 V_b
 }
@@ -1054,12 +1054,12 @@ where $V_b$ is the battery voltage. In implementation, each duty command is limi
 ```math
 -1
 \leq
-d_{\mathrm{cmd}}
+d
 \leq
 1
 ```
 
-The actuator controller is a current-regulation loop, not an RSLQR controller. The RSLQR controller computes wheel-torque commands; the actuator controller tracks the corresponding current commands.
+The actuator controller is a current-regulation loop, not an RSLQR controller. The RSLQR controller computes wheel-torque control inputs; the actuator controller tracks the corresponding current references.
 
 ---
 
