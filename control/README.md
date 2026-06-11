@@ -1,4 +1,4 @@
-# SEBA-ROBOT — Dynamics and Velocity-Tracking Control Model
+# Dynamics and Velocity-Tracking Control Model
 
 This document describes the nonlinear dynamics, reduced velocity-control state model, linearization, and robust servomechanism LQR controller used for SEBA-ROBOT.
 
