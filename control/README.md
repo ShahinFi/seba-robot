@@ -858,12 +858,7 @@ Z^TQZ
 dt
 ```
 
-where:
-
-| Matrix | Requirement |
-|---|---|
-| $Q$ | symmetric positive semidefinite |
-| $R$ | symmetric positive definite |
+where $Q$ is the augmented-state weighting matrix and is symmetric positive semidefinite, and $R$ is the control-input weighting matrix and is symmetric positive definite.
 
 The gain matrix is obtained from the continuous-time algebraic Riccati equation:
 
