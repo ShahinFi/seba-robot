@@ -1118,14 +1118,14 @@ The corresponding signed PWM duty command is
 ```math
 d_{s,\mathrm{cmd}}
 =
-\operatorname{sat}_{[-1,1]}
+\mathrm{sat}_{[-1,1]}
 \left(
 \frac{
 V_{s,\mathrm{cmd}}
 }{
 V_b
 }
-\right).
+\right)
 ```
 
 In discrete time, the current-controller integrator is updated as
