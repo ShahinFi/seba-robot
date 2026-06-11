@@ -333,7 +333,7 @@ The corresponding state derivative is
 \dot{\theta} \\
 \ddot{\theta} \\
 \ddot{\psi}
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 The acceleration terms are obtained by solving the nonlinear dynamics for $\ddot{q}$. Therefore, before linearization, the reduced nonlinear plant may be written compactly as
