@@ -915,8 +915,6 @@ T_{\mathrm{actual}}
 
 ---
 
----
-
 ## Appendix A. MATLAB Symbolic Derivation of the Linearized Matrices
 
 This appendix gives the MATLAB symbolic workflow used to derive the linearized matrices $A$ and $B$ shown in Section 9.
