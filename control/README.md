@@ -8,6 +8,98 @@ The nonlinear dynamic model follows standard two-wheeled inverted-pendulum robot
 
 ## 1. Control System Overview
 
+The control objective is to stabilize the robot about the upright equilibrium while tracking commanded forward velocity and commanded yaw rate.
+
+The commanded output vector is
+
+```math
+r =
+\begin{bmatrix}
+v_{\mathrm{cmd}} \\
+\dot{\psi}_{\mathrm{cmd}}
+\end{bmatrix}
+```
+
+where $v_{\mathrm{cmd}}$ is the commanded forward velocity and $\dot{\psi}_{\mathrm{cmd}}$ is the commanded yaw rate.
+
+The output vector selected for tracking is
+
+```math
+Y =
+\begin{bmatrix}
+v \\
+\dot{\psi}
+\end{bmatrix}
+```
+
+where $v$ is the forward velocity of the wheel axle midpoint and $\dot{\psi}$ is the yaw rate.
+
+The control system is organized into two control layers. The motion-control layer stabilizes the robot and tracks $r$ using a rigid-body model whose input is wheel-side torque. The actuator-control layer realizes the commanded wheel-side torques by regulating measured motor current and generating PWM commands for the motor driver.
+
+```text
+                    r = [v_cmd, psi_dot_cmd]^T
+                                  |
+                                  v
++----------------------------------------------------------------+
+| Motion-control layer                                           |
+| RSLQR velocity-tracking controller                             |
+|                                                                |
+| uses:    r and estimated motion feedback                       |
+| forms:   tracking-error and augmented RSLQR signals            |
+| output:  U_cmd = [T_L,cmd, T_R,cmd]^T                          |
++----------------------------------------------------------------+
+                                  |
+                                  | commanded wheel-side torque
+                                  v
++----------------------------------------------------------------+
+| Actuator-control layer                                         |
+| torque realization using motor-current control                 |
+|                                                                |
+| uses:    U_cmd and measured motor current                      |
+| output:  PWM motor-driver commands                             |
++----------------------------------------------------------------+
+                                  |
+                                  | PWM / motor voltage
+                                  v
++----------------------------------------------------------------+
+| Motor drivers, motors, gearboxes, and wheels                   |
+| electrical actuation produces approximate wheel-side torque    |
++----------------------------------------------------------------+
+                                  |
+                                  | modeled wheel-side torque U
+                                  v
++----------------------------------------------------------------+
+| Robot rigid-body dynamics                                      |
+| wheel-side torque produces robot motion                        |
++----------------------------------------------------------------+
+                                  |
+                                  v
++----------------------------------------------------------------+
+| Sensors and state estimation                                   |
+| IMU, wheel encoders, and current sensors                       |
++----------------------------------------------------------------+
+             |                                           |
+             | estimated motion feedback                 | measured motor current
+             v                                           v
+      motion-control layer                       actuator-control layer
+```
+
+The motion-control model uses the wheel-side torque vector
+
+```math
+U =
+\begin{bmatrix}
+T_L \\
+T_R
+\end{bmatrix}
+```
+
+as the effective plant input, where $T_L$ and $T_R$ are the left and right wheel-side torques at the wheel axle after gearbox reduction.
+
+In the physical robot, wheel torque is not directly measured. The actuator-control layer therefore realizes the commanded torque indirectly by regulating measured motor current. The current-to-torque relationship is treated as an actuator model and calibration relationship, not as a direct torque measurement.
+
+With this interpretation, the rigid-body dynamics and RSLQR controller describe the motion-control problem from wheel-side torque to robot motion, while the actuator-control layer describes how the commanded wheel-side torque is produced by the motor-drive hardware.
+
 ---
 
 ## 2. Coordinate System, Inputs, and Sign Conventions
