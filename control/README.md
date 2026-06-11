@@ -46,13 +46,13 @@ The motion-control layer is designed using a rigid-body robot model whose input 
 | Physical robot and drivetrain                                  |
 | motor drivers, motors, gearboxes, wheels, and robot body       |
 +----------------------------------------------------------------+
-                                  |
-                                  | physical motion and sensor signals
-                                  v
-+----------------------------------------------------------------+
-| Sensors and state estimation                                   |
-| IMU, wheel encoders, and current sensors                       |
-+----------------------------------------------------------------+
+             |                                           |
+             | motion observed by IMU and encoders       | current measured by current sensors
+             v                                           v
++--------------------------------+          +--------------------------------+
+| Motion sensing and estimation  |          | Current sensing                |
+| estimated robot motion         |          | measured motor current         |
++--------------------------------+          +--------------------------------+
              |                                           |
              | estimated robot motion                    | measured motor current
              v                                           v
