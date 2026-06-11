@@ -40,20 +40,14 @@ The motion-control layer is designed using a rigid-body robot model whose input 
 | output:  PWM motor-driver commands                             |
 +----------------------------------------------------------------+
                                   |
-                                  | PWM / motor voltage
+                                  | PWM commands
                                   v
 +----------------------------------------------------------------+
-| Motor drivers, motors, gearboxes, and wheels                   |
-| electrical actuation produces approximate wheel-side torque    |
+| Physical robot and drivetrain                                  |
+| motor drivers, motors, gearboxes, wheels, and robot body       |
 +----------------------------------------------------------------+
                                   |
-                                  | modeled wheel-side torque
-                                  v
-+----------------------------------------------------------------+
-| Robot rigid-body dynamics                                      |
-| wheel-side torque produces robot motion                        |
-+----------------------------------------------------------------+
-                                  |
+                                  | physical motion and sensor signals
                                   v
 +----------------------------------------------------------------+
 | Sensors and state estimation                                   |
