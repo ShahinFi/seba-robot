@@ -36,7 +36,7 @@ The generalized velocity and acceleration vectors are
 \ddot{x} \\
 \ddot{\theta} \\
 \ddot{\psi}
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 where:
@@ -118,7 +118,7 @@ D_q\dot{q}
 +
 G(q)
 =
-B_{\tau}\tau.
+B_{\tau}\tau
 ```
 
 Solving for acceleration gives
@@ -135,7 +135,7 @@ C_q(q,\dot{q})\dot{q}
 D_q\dot{q}
 -
 G(q)
-\right].
+\right]
 ```
 
 ---
@@ -169,7 +169,7 @@ I_{pz}
 \frac{\left(m_w + \frac{I_w}{r_w^2}\right)W^2}{2}
 -
 \left(I_{pz} - I_{px} - m_p l_p^2\right)\sin^2\theta
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 ---
@@ -197,7 +197,7 @@ m_p l_p \dot{\psi}\sin\theta
 -\left(I_{pz}-I_{px}-m_p l_p^2\right)\dot{\psi}\sin\theta\cos\theta
 &
 -\left(I_{pz}-I_{px}-m_p l_p^2\right)\dot{\theta}\sin\theta\cos\theta
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 ---
@@ -225,7 +225,7 @@ D_q
 0
 &
 \frac{W^2c}{2r_w^2}
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 ---
@@ -241,7 +241,7 @@ G(q)
 -m_p l_p g \sin\theta
 \\
 0
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 With the sign convention used here, a positive forward pitch angle produces an open-loop gravitational tendency to increase the forward pitch angle around the upright equilibrium.
@@ -265,7 +265,7 @@ B_{\tau}
 -\frac{W}{2r_w}
 &
 \frac{W}{2r_w}
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 The first row maps wheel torques into forward generalized force.
@@ -291,7 +291,7 @@ Y
 =
 CX
 +
-DU.
+DU
 ```
 
 Here, $X$ is the state vector, $U$ is the plant input vector, and $Y$ is the output vector. The matrices $A$, $B$, $C$, and $D$ describe the linearized plant around the chosen operating point.
@@ -313,7 +313,7 @@ U =
 \begin{bmatrix}
 T_L \\
 T_R
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 The corresponding state derivative is
@@ -341,7 +341,7 @@ The acceleration terms are obtained by solving the nonlinear dynamics for $\ddot
 ```math
 \dot{X}
 =
-F(X,U).
+F(X,U)
 ```
 
 The plant is linearized around the upright stationary equilibrium
@@ -361,7 +361,7 @@ U_{\mathrm{eq}}
 \begin{bmatrix}
 0 \\
 0
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 Equivalently,
@@ -377,7 +377,7 @@ v = 0,
 \qquad
 T_L = 0,
 \qquad
-T_R = 0.
+T_R = 0
 ```
 
 Using the small-angle approximations
@@ -385,7 +385,7 @@ Using the small-angle approximations
 ```math
 \sin\theta \approx \theta,
 \qquad
-\cos\theta \approx 1,
+\cos\theta \approx 1
 ```
 
 the state matrices are defined by the Jacobians
@@ -401,7 +401,7 @@ B
 =
 \left.
 \frac{\partial F}{\partial U}
-\right|_{X_{\mathrm{eq}},U_{\mathrm{eq}}}.
+\right|_{X_{\mathrm{eq}},U_{\mathrm{eq}}}
 ```
 
 Evaluating the Jacobians with MATLAB symbolic computation gives the following compact symbolic state and input matrices. The MATLAB derivation used to obtain these matrices is provided in [Appendix A](#appendix-a-matlab-symbolic-derivation-of-the-linearized-matrices).
@@ -419,7 +419,7 @@ I_{py}m_pr_w^2
 +
 2I_{py}m_wr_w^2
 +
-2l_p^2m_pm_wr_w^2.
+2l_p^2m_pm_wr_w^2
 ```
 
 Define the common denominator for the yaw dynamics as
@@ -433,7 +433,7 @@ I_wW^2
 +
 4J_wr_w^2
 +
-W^2m_wr_w^2.
+W^2m_wr_w^2
 ```
 
 The linearized state matrix is
@@ -507,7 +507,7 @@ cW^2
 }{
 \Gamma
 }
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 The linearized input matrix is
@@ -555,7 +555,7 @@ Wr_w
 }{
 \Gamma
 }
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 The first and third rows of $B$ have identical left and right torque columns, so the forward and pitch dynamics are driven by the equal-torque component $T_L + T_R$. The fourth row has opposite signs, so the yaw dynamics are driven by the differential-torque component $T_R - T_L$.
@@ -567,7 +567,7 @@ Y =
 \begin{bmatrix}
 v \\
 \dot{\psi}
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 Because the outputs are directly selected from the state and do not depend directly on the wheel-torque input,
@@ -587,7 +587,7 @@ D
 0 & 0
 \\
 0 & 0
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 ---
@@ -603,7 +603,7 @@ r =
 \begin{bmatrix}
 v_{\mathrm{cmd}} \\
 \dot{\psi}_{\mathrm{cmd}}
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 To construct the augmented model, the derivative of the tracking error is needed. The tracking error is
@@ -613,7 +613,7 @@ e
 =
 Y
 -
-r.
+r
 ```
 
 Since the command $r$ is assumed constant,
@@ -621,7 +621,7 @@ Since the command $r$ is assumed constant,
 ```math
 \dot{e}
 =
-\dot{Y}.
+\dot{Y}
 ```
 
 Using the output equation,
@@ -631,7 +631,7 @@ Y
 =
 CX
 +
-DU,
+DU
 ```
 
 the error dynamics become
@@ -641,7 +641,7 @@ the error dynamics become
 =
 C\dot{X}
 +
-D\dot{U}.
+D\dot{U}
 ```
 
 The robust servomechanism design model augments the tracking error with the state derivative:
@@ -656,7 +656,7 @@ e
 \qquad
 \mu
 =
-\dot{U}.
+\dot{U}
 ```
 
 Differentiating the linearized state equation gives
@@ -666,7 +666,7 @@ Differentiating the linearized state equation gives
 =
 A\dot{X}
 +
-B\dot{U}.
+B\dot{U}
 ```
 
 Thus, the augmented model is
@@ -700,7 +700,7 @@ B_{\mathrm{aug}}
 D
 \\
 B
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 Since $D=0$ for this output choice,
@@ -712,7 +712,7 @@ B_{\mathrm{aug}}
 0_{2 \times 2}
 \\
 B
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 The augmented state and input dimensions are
@@ -720,7 +720,7 @@ The augmented state and input dimensions are
 ```math
 Z \in \mathbb{R}^{6},
 \qquad
-\mu \in \mathbb{R}^{2}.
+\mu \in \mathbb{R}^{2}
 ```
 
 ---
@@ -738,7 +738,7 @@ Z^TQZ
 +
 \mu^TR\mu
 \right)
-dt.
+dt
 ```
 
 where:
@@ -759,7 +759,7 @@ PB_{\mathrm{aug}}R^{-1}B_{\mathrm{aug}}^TP
 +
 Q
 =
-0.
+0
 ```
 
 Then
@@ -767,7 +767,7 @@ Then
 ```math
 K_c
 =
-R^{-1}B_{\mathrm{aug}}^TP.
+R^{-1}B_{\mathrm{aug}}^TP
 ```
 
 The control law is
@@ -776,7 +776,7 @@ The control law is
 \mu
 =
 -
-K_cZ.
+K_cZ
 ```
 
 Since
@@ -784,7 +784,7 @@ Since
 ```math
 \mu
 =
-\dot{U},
+\dot{U}
 ```
 
 the RSLQR output is the wheel-torque derivative. The wheel-torque command is obtained by integration:
@@ -795,7 +795,7 @@ U(t)
 U(0)
 +
 \int_{0}^{t}
-\dot{U}(\tau)d\tau.
+\dot{U}(\tau)d\tau
 ```
 
 In discrete time:
@@ -805,7 +805,7 @@ U[k+1]
 =
 U[k]
 +
-T_s\mu[k].
+T_s\mu[k]
 ```
 
 where $T_s$ is the controller sample time.
@@ -818,7 +818,7 @@ U =
 T_L
 \\
 T_R
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 ---
@@ -834,7 +834,7 @@ T_{\max,L},
 \qquad
 |T_R|
 \leq
-T_{\max,R}.
+T_{\max,R}
 ```
 
 For symmetric limits,
@@ -846,7 +846,7 @@ T_{\max},
 \qquad
 |T_R|
 \leq
-T_{\max}.
+T_{\max}
 ```
 
 When a torque component reaches its limit, only torque-rate commands that drive it back toward the admissible range are integrated. This keeps the commanded wheel torque physically feasible.
@@ -872,7 +872,7 @@ so the wheel-torque command is converted to a current command by
 ```math
 I_{\mathrm{cmd}}
 =
-\frac{T_{\mathrm{cmd}}}{K_t}.
+\frac{T_{\mathrm{cmd}}}{K_t}
 ```
 
 If this assumption is not valid, actuator dynamics may be added later, for example:
@@ -886,7 +886,7 @@ T_{\mathrm{cmd}}
 T_{\mathrm{actual}}
 }{
 \tau_m
-}.
+}
 ```
 
 ---
@@ -1016,7 +1016,7 @@ G(q)
 -
 B_{\tau}\tau
 =
-0.
+0
 ```
 
 ```matlab
@@ -1059,7 +1059,7 @@ U
 T_L
 \\
 T_R
-\end{bmatrix}.
+\end{bmatrix}
 ```
 
 ```matlab
@@ -1105,7 +1105,7 @@ The Jacobians are evaluated at
 \qquad
 T_L = 0,
 \qquad
-T_R = 0.
+T_R = 0
 ```
 
 ```matlab
