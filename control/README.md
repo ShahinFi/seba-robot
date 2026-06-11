@@ -1037,10 +1037,10 @@ K_{i,I}\xi_I
 
 where $V_{\mathrm{ctrl}}$ is the average motor-voltage control vector. For matched actuators, $K_{p,I}$ and $K_{i,I}$ may be applied componentwise to the left and right current errors.
 
-The signed PWM duty command before saturation is
+The signed PWM command before saturation is
 
 ```math
-d
+u_{\mathrm{PWM}}
 =
 \frac{
 V_{\mathrm{ctrl}}
@@ -1049,12 +1049,12 @@ V_b
 }
 ```
 
-where $V_b$ is the battery voltage. In implementation, each duty command is limited componentwise:
+where $V_b$ is the battery voltage. In implementation, each PWM command is limited componentwise:
 
 ```math
 -1
 \leq
-d
+u_{\mathrm{PWM}}
 \leq
 1
 ```
