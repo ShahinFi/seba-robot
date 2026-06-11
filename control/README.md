@@ -916,7 +916,7 @@ When a torque component reaches its limit, only torque-rate commands that drive 
 
 ## 9. Actuator Control and Torque Realization
 
-The RSLQR motion controller computes commanded wheel-side torques:
+The RSLQR controller produces commanded wheel-side torques:
 
 ```math
 U_{\mathrm{cmd}}
@@ -928,9 +928,9 @@ T_{R,\mathrm{cmd}}
 \end{bmatrix}
 ```
 
-In the physical robot, wheel torque is not commanded or measured directly. The actuator-control layer realizes the commanded wheel-side torque indirectly by regulating motor current and generating PWM commands for the motor driver.
+Wheel torque is not measured directly. The actuator controller realizes $U_{\mathrm{cmd}}$ by regulating motor current and generating PWM commands.
 
-For a DC motor, the motor-shaft torque is approximated by
+For a DC motor,
 
 ```math
 T_m
@@ -938,9 +938,9 @@ T_m
 K_{t,m} I
 ```
 
-where $T_m$ is the motor-shaft torque, $K_{t,m}$ is the motor torque constant, and $I$ is the signed motor current.
+where $T_m$ is motor-shaft torque, $K_{t,m}$ is the motor torque constant, and $I$ is signed motor current. The current sign is chosen so that positive current produces positive wheel-side torque.
 
-With gearbox reduction, the wheel-side torque is approximated by
+With gearbox reduction and drivetrain efficiency,
 
 ```math
 T_w
@@ -948,25 +948,9 @@ T_w
 \eta_g N T_m
 ```
 
-where $N$ is the gearbox reduction ratio and $\eta_g$ is the gearbox/drivetrain efficiency. The factor $\eta_g$ captures average drivetrain losses such as gearbox friction and transmission inefficiency.
+where $T_w$ is wheel-side torque, $N$ is the gearbox reduction ratio, and $\eta_g$ is the gearbox/drivetrain efficiency.
 
-Substituting the motor torque relation gives
-
-```math
-T_w
-\approx
-\eta_g N K_{t,m} I
-```
-
-The effective wheel-side torque constant is therefore defined as
-
-```math
-K_{t,w}
-\approx
-\eta_g N K_{t,m}
-```
-
-so that the nominal actuator torque model becomes
+Therefore,
 
 ```math
 T_w
@@ -974,21 +958,26 @@ T_w
 K_{t,w} I
 ```
 
-The value of $K_{t,w}$ is treated as a calibrated actuator parameter. Residual effects such as static friction, backlash, dead zone, and load-dependent losses are not modeled separately in the nominal actuator model.
+with
 
-The actuator controller receives the commanded wheel-side torque from the motion controller and converts it into a current command:
+```math
+K_{t,w}
+\approx
+\eta_g N K_{t,m}
+```
+
+The parameter $K_{t,w}$ is treated as a calibrated effective wheel-side torque constant. Other effects such as static friction, backlash, dead zone, and load-dependent losses are not modeled separately.
+
+For matched left and right actuators, the torque command is converted to a current command by
 
 ```math
 I_{\mathrm{cmd}}
 =
-\frac{
-T_{\mathrm{cmd}}
-}{
-K_{t,w}
-}
+\frac{1}{K_{t,w}}
+U_{\mathrm{cmd}}
 ```
 
-For the left and right wheels,
+or equivalently,
 
 ```math
 I_{L,\mathrm{cmd}}
@@ -1008,7 +997,7 @@ K_{t,w}
 }
 ```
 
-The measured motor-current vector is
+The measured current vector is
 
 ```math
 I_{\mathrm{meas}}
@@ -1020,7 +1009,7 @@ I_{R,\mathrm{meas}}
 \end{bmatrix}
 ```
 
-and the current-control error is
+The current-control error is
 
 ```math
 e_I
@@ -1030,10 +1019,10 @@ I_{\mathrm{cmd}}
 I_{\mathrm{meas}}
 ```
 
-The actuator-control layer uses a PI current controller:
+A PI current controller generates the commanded average motor voltage:
 
 ```math
-\eta_I(t)
+\xi_I(t)
 =
 \int e_I(t)dt
 ```
@@ -1043,10 +1032,10 @@ V_{\mathrm{cmd}}
 =
 K_{p,I}e_I
 +
-K_{i,I}\eta_I
+K_{i,I}\xi_I
 ```
 
-where $V_{\mathrm{cmd}}$ is the commanded average motor voltage.
+where $V_{\mathrm{cmd}}$ is the commanded average motor-voltage vector. For matched actuators, $K_{p,I}$ and $K_{i,I}$ may be applied componentwise to the left and right current errors.
 
 The signed PWM duty command before saturation is
 
@@ -1060,7 +1049,7 @@ V_b
 }
 ```
 
-where $V_b$ is the battery voltage. In implementation, each duty command is limited to the admissible range
+where $V_b$ is the battery voltage. In implementation, each duty command is limited componentwise:
 
 ```math
 -1
@@ -1070,7 +1059,7 @@ d_{\mathrm{cmd}}
 1
 ```
 
-The actuator-control layer is not formulated as an RSLQR problem. It is a directly measured current-regulation problem. The RSLQR controller handles the coupled unstable robot motion, while the actuator controller makes the motor-drive hardware approximate the commanded wheel-side torque through current control and PWM.
+The actuator controller is a current-regulation loop, not an RSLQR controller. The RSLQR controller computes wheel-torque commands; the actuator controller tracks the corresponding current commands.
 
 ---
 
