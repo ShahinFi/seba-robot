@@ -915,6 +915,259 @@ T_{\mathrm{actual}}
 
 ---
 
+---
+
+## Appendix A. MATLAB Symbolic Derivation of the Linearized Matrices
+
+This appendix gives the MATLAB symbolic workflow used to derive the linearized matrices $A$ and $B$ shown in Section 9.
+
+The code starts from the nonlinear dynamics already defined in this document. It solves the nonlinear equations for the generalized accelerations, constructs the reduced nonlinear state derivative, computes the Jacobians, and evaluates them at the upright stationary equilibrium.
+
+### A.1 Symbolic Variables
+
+```matlab
+syms mp mw Iw Jw Ipx Ipy Ipz rw W lp c g
+syms x x_dot x_dot_dot
+syms theta theta_dot theta_dot_dot
+syms psi psi_dot psi_dot_dot
+syms TL TR
+```
+
+### A.2 Nonlinear Model Matrices
+
+```matlab
+M11 = mp + 2*mw + 2*Iw/(rw^2);
+M12 = mp*lp*cos(theta);
+M13 = 0;
+
+M21 = M12;
+M22 = Ipy + mp*(lp^2);
+M23 = 0;
+
+M31 = 0;
+M32 = 0;
+M33 = Ipz ...
+    + 2*Jw ...
+    + (mw + Iw/(rw^2))*(W^2)/2 ...
+    - (Ipz - Ipx - mp*(lp^2))*sin(theta)^2;
+
+M = [
+    M11, M12, M13;
+    M21, M22, M23;
+    M31, M32, M33
+];
+```
+
+```matlab
+C11 = 0;
+C12 = -mp*lp*theta_dot*sin(theta);
+C13 = -mp*lp*psi_dot*sin(theta);
+
+C21 = 0;
+C22 = 0;
+C23 = (Ipz - Ipx - mp*(lp^2))*psi_dot*sin(theta)*cos(theta);
+
+C31 = -C13;
+C32 = -C23;
+C33 = -(Ipz - Ipx - mp*(lp^2))*theta_dot*sin(theta)*cos(theta);
+
+Cq = [
+    C11, C12, C13;
+    C21, C22, C23;
+    C31, C32, C33
+];
+```
+
+```matlab
+D11 = 2*c/(rw^2);
+D12 = -2*c/rw;
+D13 = 0;
+
+D21 = D12;
+D22 = 2*c;
+D23 = 0;
+
+D31 = 0;
+D32 = 0;
+D33 = (W^2*c)/(2*(rw^2));
+
+Dq = [
+    D11, D12, D13;
+    D21, D22, D23;
+    D31, D32, D33
+];
+```
+
+```matlab
+G = [
+    0;
+    -mp*lp*g*sin(theta);
+    0
+];
+
+Btau = [
+    1/rw,       1/rw;
+    -1,         -1;
+    -W/(2*rw),  W/(2*rw)
+];
+
+tau = [
+    TL;
+    TR
+];
+
+q_dot = [
+    x_dot;
+    theta_dot;
+    psi_dot
+];
+
+q_dot_dot = [
+    x_dot_dot;
+    theta_dot_dot;
+    psi_dot_dot
+];
+```
+
+The symbolic nonlinear equation is formed as
+
+```math
+M(q)\ddot{q}
++
+C_q(q,\dot{q})\dot{q}
++
+D_q\dot{q}
++
+G(q)
+-
+B_{\tau}\tau
+=
+0.
+```
+
+```matlab
+Eq = M*q_dot_dot + Cq*q_dot + Dq*q_dot + G - Btau*tau;
+```
+
+### A.3 Solve for Generalized Accelerations
+
+```matlab
+solutions = solve( ...
+    [Eq(1) == 0, Eq(2) == 0, Eq(3) == 0], ...
+    [x_dot_dot, theta_dot_dot, psi_dot_dot] ...
+);
+
+solution_x_dot_dot     = simplify(solutions.x_dot_dot);
+solution_theta_dot_dot = simplify(solutions.theta_dot_dot);
+solution_psi_dot_dot   = simplify(solutions.psi_dot_dot);
+```
+
+### A.4 Construct the Reduced Nonlinear State Derivative
+
+The reduced control state is
+
+```math
+X
+=
+\begin{bmatrix}
+\dot{x}
+\\
+\theta
+\\
+\dot{\theta}
+\\
+\dot{\psi}
+\end{bmatrix},
+\qquad
+U
+=
+\begin{bmatrix}
+T_L
+\\
+T_R
+\end{bmatrix}.
+```
+
+```matlab
+X = [
+    x_dot;
+    theta;
+    theta_dot;
+    psi_dot
+];
+
+U = [
+    TL;
+    TR
+];
+
+F = [
+    solution_x_dot_dot;
+    theta_dot;
+    solution_theta_dot_dot;
+    solution_psi_dot_dot
+];
+```
+
+### A.5 Compute the Jacobians
+
+```matlab
+A = simplify(jacobian(F, X));
+B = simplify(jacobian(F, U));
+```
+
+### A.6 Evaluate at the Upright Stationary Equilibrium
+
+The Jacobians are evaluated at
+
+```math
+\dot{x} = 0,
+\qquad
+\theta = 0,
+\qquad
+\dot{\theta} = 0,
+\qquad
+\dot{\psi} = 0,
+\qquad
+T_L = 0,
+\qquad
+T_R = 0.
+```
+
+```matlab
+eq_vars = [
+    x_dot;
+    theta;
+    theta_dot;
+    psi_dot;
+    TL;
+    TR
+];
+
+eq_vals = [
+    0;
+    0;
+    0;
+    0;
+    0;
+    0
+];
+
+A = simplify(subs(A, eq_vars, eq_vals));
+B = simplify(subs(B, eq_vars, eq_vals));
+```
+
+### A.7 Display the Final Symbolic Matrices
+
+```matlab
+A
+B
+```
+
+The resulting symbolic matrices are the compact linearized matrices shown in Section 9. Physical parameter values can be substituted after this step to obtain the numerical state-space model used for simulation or LQR gain computation.
+
+---
+
 ## References
 
 1. S. Kim and S. J. Kwon, “Dynamic Modeling of a Two-wheeled Inverted Pendulum Balancing Mobile Robot,” *International Journal of Control, Automation and Systems*, vol. 13, no. 4, pp. 926–933, 2015.
