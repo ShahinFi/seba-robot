@@ -404,7 +404,185 @@ B
 \right|_{X_{\mathrm{eq}},U_{\mathrm{eq}}}.
 ```
 
-The full entries of $A$ and $B$ are obtained by evaluating these Jacobians from the nonlinear dynamics.
+Evaluating these Jacobians gives the following compact symbolic state and input matrices.
+
+Define the common denominator for the coupled forward-pitch dynamics as
+
+```math
+\Delta
+=
+2I_{py}I_w
++
+2I_wl_p^2m_p
++
+I_{py}m_pr_w^2
++
+2I_{py}m_wr_w^2
++
+2l_p^2m_pm_wr_w^2.
+```
+
+Define the common denominator for the yaw dynamics as
+
+```math
+\Gamma
+=
+I_wW^2
++
+2I_{pz}r_w^2
++
+4J_wr_w^2
++
+W^2m_wr_w^2.
+```
+
+Then the linearized state matrix is
+
+```math
+A
+=
+\begin{bmatrix}
+A_{11} & A_{12} & A_{13} & 0
+\\
+0 & 0 & 1 & 0
+\\
+A_{31} & A_{32} & A_{33} & 0
+\\
+0 & 0 & 0 & A_{44}
+\end{bmatrix}
+```
+
+where
+
+```math
+A_{11}
+=
+-\frac{
+2c\left(m_pl_p^2 + m_pr_wl_p + I_{py}\right)
+}{
+\Delta
+},
+```
+
+```math
+A_{12}
+=
+-\frac{
+gl_p^2m_p^2r_w^2
+}{
+\Delta
+},
+```
+
+```math
+A_{13}
+=
+\frac{
+2cr_w\left(m_pl_p^2 + m_pr_wl_p + I_{py}\right)
+}{
+\Delta
+},
+```
+
+```math
+A_{31}
+=
+\frac{
+4I_wc
++
+2cm_pr_w^2
++
+4cm_wr_w^2
++
+2cl_pm_pr_w
+}{
+r_w\Delta
+},
+```
+
+```math
+A_{32}
+=
+\frac{
+gl_pm_p\left(2I_w + m_pr_w^2 + 2m_wr_w^2\right)
+}{
+\Delta
+},
+```
+
+```math
+A_{33}
+=
+-\frac{
+2c\left(2I_w + m_pr_w^2 + 2m_wr_w^2 + l_pm_pr_w\right)
+}{
+\Delta
+},
+```
+
+and
+
+```math
+A_{44}
+=
+-\frac{
+cW^2
+}{
+\Gamma
+}.
+```
+
+The linearized input matrix is
+
+```math
+B
+=
+\begin{bmatrix}
+B_{11} & B_{11}
+\\
+0 & 0
+\\
+B_{31} & B_{31}
+\\
+-B_{41} & B_{41}
+\end{bmatrix}
+```
+
+where
+
+```math
+B_{11}
+=
+\frac{
+r_w\left(m_pl_p^2 + m_pr_wl_p + I_{py}\right)
+}{
+\Delta
+},
+```
+
+```math
+B_{31}
+=
+-\frac{
+2I_w + m_pr_w^2 + 2m_wr_w^2 + l_pm_pr_w
+}{
+\Delta
+},
+```
+
+and
+
+```math
+B_{41}
+=
+\frac{
+Wr_w
+}{
+\Gamma
+}.
+```
+
+The first and third rows of $B$ have identical left and right torque columns, so the forward and pitch dynamics are driven by the equal-torque component $T_L + T_R$. The fourth row has opposite signs, so the yaw dynamics are driven by the differential-torque component $T_R - T_L$.
 
 The output is chosen as forward velocity and yaw rate:
 
