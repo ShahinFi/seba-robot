@@ -6,7 +6,11 @@ The nonlinear dynamic model follows standard two-wheeled inverted-pendulum robot
 
 ---
 
-## 1. Coordinate System and Sign Conventions
+## 1. Control System Overview
+
+---
+
+## 2. Coordinate System, Inputs, and Sign Conventions
 
 The robot is modeled as a two-wheeled inverted pendulum moving on a flat horizontal surface.
 
@@ -84,7 +88,7 @@ Positive derivatives indicate increasing values of the corresponding coordinates
 
 ---
 
-## 2. Physical Parameters
+## 3. Physical Parameters
 
 | Symbol | Meaning |
 |---|---|
@@ -105,7 +109,9 @@ The symbol $W$ is used for wheel separation to avoid confusion with the differen
 
 ---
 
-## 3. Nonlinear Dynamics
+## 4. Robot Rigid-Body Dynamics
+
+### 4.1 Nonlinear Dynamics
 
 The nonlinear equations of motion are written in manipulator form:
 
@@ -140,7 +146,7 @@ G(q)
 
 ---
 
-## 4. Inertia Matrix
+### 4.2 Inertia Matrix
 
 ```math
 M(q)
@@ -174,7 +180,7 @@ I_{pz}
 
 ---
 
-## 5. Coriolis Matrix
+### 4.3 Coriolis Matrix
 
 ```math
 C_q(q,\dot{q})
@@ -202,7 +208,7 @@ m_p l_p \dot{\psi}\sin\theta
 
 ---
 
-## 6. Damping Matrix
+### 4.4 Damping Matrix
 
 ```math
 D_q
@@ -230,7 +236,7 @@ D_q
 
 ---
 
-## 7. Gravity Vector
+### 4.5 Gravity Vector
 
 ```math
 G(q)
@@ -248,7 +254,7 @@ With the sign convention used here, a positive forward pitch angle produces an o
 
 ---
 
-## 8. Wheel-Torque Input Mapping
+### 4.6 Wheel-Torque Input Mapping
 
 ```math
 B_{\tau}
@@ -276,7 +282,7 @@ The third row maps the left-right wheel torque difference into yaw generalized t
 
 ---
 
-## 9. State-Space Model for Control
+## 5. Control-Oriented State-Space Model
 
 For controller design, the nonlinear dynamics are converted into a reduced state-space model and then linearized around the upright stationary operating point:
 
@@ -592,7 +598,7 @@ D
 
 ---
 
-## 10. Robust Servomechanism LQR Formulation
+## 6. Robust Servomechanism LQR Motion Controller
 
 The RSLQR controller is designed using the nominal linear plant obtained from the linearized dynamics. Unmodeled effects may be represented as bounded disturbances, but the nominal RSLQR gain is designed using the matrices $A$, $B$, $C$, and $D$.
 
@@ -725,7 +731,7 @@ Z \in \mathbb{R}^{6},
 
 ---
 
-## 11. RSLQR Control Law
+## 7. RSLQR Control Law and Torque Command Generation
 
 The LQR cost function for the augmented system is
 
@@ -823,7 +829,7 @@ T_R
 
 ---
 
-## 12. Input Constraints
+## 8. Input Constraints
 
 The wheel-torque command obtained by integrating $\dot{U}$ is limited by the physical actuator range:
 
@@ -853,7 +859,7 @@ When a torque component reaches its limit, only torque-rate commands that drive 
 
 ---
 
-## 13. Actuator Assumption and Torque Tracking
+## 9. Actuator Control and Torque Realization
 
 The actuator subsystem is modeled separately from the outer-loop dynamics. The motor electrical dynamics and PWM generation are handled by a faster inner current-control loop.
 
@@ -893,7 +899,7 @@ T_{\mathrm{actual}}
 
 ## Appendix A. MATLAB Symbolic Derivation of the Linearized Matrices
 
-This appendix gives the MATLAB symbolic workflow used to derive the linearized matrices $A$ and $B$ shown in Section 9.
+This appendix gives the MATLAB symbolic workflow used to derive the linearized matrices $A$ and $B$ shown in Section 5.
 
 The code starts from the nonlinear dynamics already defined in this document. It solves the nonlinear equations for the generalized accelerations, constructs the reduced nonlinear state derivative, computes the Jacobians, and evaluates them at the upright stationary equilibrium.
 
@@ -1138,7 +1144,7 @@ A
 B
 ```
 
-The resulting symbolic matrices are the compact linearized matrices shown in Section 9. Physical parameter values can be substituted after this step to obtain the numerical state-space model used for simulation or LQR gain computation.
+The resulting symbolic matrices are the compact linearized matrices shown in Section 5. Physical parameter values can be substituted after this step to obtain the numerical state-space model used for simulation or LQR gain computation.
 
 ---
 
