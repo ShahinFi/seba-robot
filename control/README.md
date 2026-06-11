@@ -404,7 +404,7 @@ B
 \right|_{X_{\mathrm{eq}},U_{\mathrm{eq}}}.
 ```
 
-Evaluating these Jacobians gives the following compact symbolic state and input matrices. The symbolic computation used to derive these matrices is included in Appendix A for reproducibility.
+Evaluating the Jacobians with MATLAB symbolic computation gives the following compact symbolic state and input matrices. The MATLAB derivation used to obtain these matrices is provided in [Appendix A](#appendix-a-matlab-symbolic-derivation-of-the-linearized-matrices).
 
 Define the common denominator for the coupled forward-pitch dynamics as
 
