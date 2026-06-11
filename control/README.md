@@ -166,6 +166,17 @@ The symbol $W$ is used for wheel separation to avoid confusion with the differen
 
 ## 4. Robot Rigid-Body Dynamics
 
+This section uses the following model symbols:
+
+| Symbol | Meaning |
+|---|---|
+| $M(q)$ | inertia matrix |
+| $C_q(q,\dot{q})$ | Coriolis and centrifugal matrix |
+| $D_q$ | viscous damping matrix |
+| $G(q)$ | gravity vector |
+| $B_{\tau}$ | wheel-torque input mapping matrix |
+| $\tau$ | wheel-torque input vector |
+
 ### 4.1 Nonlinear Dynamics
 
 The nonlinear equations of motion are written in manipulator form:
@@ -338,6 +349,24 @@ The third row maps the left-right wheel torque difference into yaw generalized t
 ---
 
 ## 5. Control-Oriented State-Space Model
+
+This section introduces the following control-oriented model symbols:
+
+| Symbol | Meaning |
+|---|---|
+| $X$ | reduced control state vector |
+| $v$ | forward velocity, $v=\dot{x}$ |
+| $U$ | control-oriented wheel-torque input vector |
+| $Y$ | output vector selected for tracking |
+| $F(X,U)$ | reduced nonlinear state derivative |
+| $A$ | linearized state matrix |
+| $B$ | linearized input matrix |
+| $C$ | output matrix |
+| $D$ | feedthrough matrix |
+| $X_{\mathrm{eq}}$ | equilibrium state |
+| $U_{\mathrm{eq}}$ | equilibrium input |
+| $\Delta$ | common denominator for the coupled forward-pitch dynamics |
+| $\Gamma$ | common denominator for the yaw dynamics |
 
 For controller design, the nonlinear dynamics are converted into a reduced state-space model and then linearized around the upright stationary operating point:
 
@@ -657,6 +686,19 @@ D
 
 ## 6. Robust Servomechanism LQR Motion Controller
 
+This section introduces the following RSLQR formulation symbols:
+
+| Symbol | Meaning |
+|---|---|
+| $r$ | command vector |
+| $v_{\mathrm{cmd}}$ | commanded forward velocity |
+| $\dot{\psi}_{\mathrm{cmd}}$ | commanded yaw rate |
+| $e$ | output tracking error |
+| $Z$ | augmented RSLQR state |
+| $\mu$ | augmented control input, $\mu=\dot{U}$ |
+| $A_{\mathrm{aug}}$ | augmented state matrix |
+| $B_{\mathrm{aug}}$ | augmented input matrix |
+
 The RSLQR controller is designed using the nominal linear plant obtained from the linearized dynamics. Unmodeled effects may be represented as bounded disturbances, but the nominal RSLQR gain is designed using the matrices $A$, $B$, $C$, and $D$.
 
 The control objective is upright stabilization with forward-velocity and yaw-rate tracking. Let the constant command vector be
@@ -790,6 +832,18 @@ Z \in \mathbb{R}^{6},
 
 ## 7. RSLQR Control Law and Torque Command Generation
 
+This section uses the following control-law symbols:
+
+| Symbol | Meaning |
+|---|---|
+| $J$ | LQR cost function |
+| $Q$ | augmented-state weighting matrix |
+| $R$ | control-input weighting matrix |
+| $P$ | Riccati solution matrix |
+| $K_c$ | RSLQR gain matrix |
+| $T_s$ | motion-controller sample time |
+| $\sigma$ | dummy integration variable |
+
 The LQR cost function for the augmented system is
 
 ```math
@@ -888,6 +942,14 @@ T_R
 
 ## 8. Input Constraints
 
+This section uses the following torque-limit symbols:
+
+| Symbol | Meaning |
+|---|---|
+| $T_{\max,L}$ | admissible left wheel-side torque limit |
+| $T_{\max,R}$ | admissible right wheel-side torque limit |
+| $T_{\max}$ | symmetric wheel-side torque limit |
+
 The wheel-torque command obtained by integrating $\dot{U}$ is limited by the physical actuator range:
 
 ```math
@@ -945,6 +1007,20 @@ The actuator model uses the following constants:
 | $V_b$ | battery voltage |
 | $K_{p,I}$ | proportional current-control gain |
 | $K_{i,I}$ | integral current-control gain |
+
+The actuator controller uses the following signals:
+
+| Symbol | Meaning |
+|---|---|
+| $T_m$ | motor-shaft torque |
+| $T_w$ | wheel-side torque |
+| $I$ | signed motor current |
+| $I_{\mathrm{ref}}$ | current reference |
+| $I_{\mathrm{meas}}$ | measured current vector |
+| $e_I$ | current-control error |
+| $\xi_I$ | current-controller integrator state |
+| $V_{\mathrm{ctrl}}$ | actuator voltage-control signal |
+| $u_{\mathrm{PWM}}$ | signed normalized PWM command |
 
 For a DC motor,
 
