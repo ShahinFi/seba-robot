@@ -404,7 +404,7 @@ B
 \right|_{X_{\mathrm{eq}},U_{\mathrm{eq}}}.
 ```
 
-Evaluating these Jacobians gives the following compact symbolic state and input matrices.
+Evaluating these Jacobians gives the following compact symbolic state and input matrices. The symbolic computation used to derive these matrices is included in Appendix A for reproducibility.
 
 Define the common denominator for the coupled forward-pitch dynamics as
 
