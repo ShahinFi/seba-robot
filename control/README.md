@@ -916,39 +916,243 @@ When a torque component reaches its limit, only torque-rate commands that drive 
 
 ## 9. Actuator Control and Torque Realization
 
-The actuator subsystem is modeled separately from the outer-loop dynamics. The motor electrical dynamics and PWM generation are handled by a faster inner current-control loop.
+The RSLQR motion controller developed above computes commanded wheel-side torques. In the physical robot, these torques are not commanded directly. The STM32 commands the motor driver through PWM, and the actuator-control layer realizes the commanded wheel torque indirectly by regulating measured motor current.
 
-Under the cascaded-control assumption, the current-loop bandwidth is sufficiently higher than the outer balance-control bandwidth, so the commanded wheel torque is treated as tracked with small delay.
-
-For a DC motor,
+The torque vector produced by the motion controller is treated as the commanded wheel-side torque:
 
 ```math
-T
-\approx
-K_t I
+U_{\mathrm{cmd}}
+=
+\begin{bmatrix}
+T_{L,\mathrm{cmd}}
+\\
+T_{R,\mathrm{cmd}}
+\end{bmatrix}
 ```
 
-so the wheel-torque command is converted to a current command by
+where $T_{L,\mathrm{cmd}}$ and $T_{R,\mathrm{cmd}}$ follow the same sign convention as the wheel-side torques $T_L$ and $T_R$ used in the rigid-body dynamics.
+
+Wheel torque is not directly measured on the robot. The actuator controller therefore does not close a torque-feedback loop. Instead, it closes a motor-current feedback loop and uses a calibrated current-to-torque model to interpret current as approximate wheel torque.
+
+For each wheel side $s \in \{L,R\}$, the DC motor torque is
+
+```math
+T_{m,s}
+=
+K_{t,m,s} I_s
+```
+
+where $T_{m,s}$ is the motor-shaft torque, $K_{t,m,s}$ is the motor torque constant, and $I_s$ is the signed motor current. The current sign is chosen so that positive current produces positive wheel-side torque according to the sign convention defined in this document.
+
+With gearbox reduction, the motor speed and wheel speed are related by
+
+```math
+\omega_{m,s}
+\approx
+N_s \omega_{w,s}
+```
+
+where $N_s$ is the gearbox reduction ratio, $\omega_{m,s}$ is the motor-shaft angular speed, and $\omega_{w,s}$ is the wheel angular speed.
+
+The corresponding wheel-side torque is approximated as
+
+```math
+T_{w,s}
+\approx
+\eta_{g,s} N_s K_{t,m,s} I_s
+```
+
+where $\eta_{g,s}$ is the gearbox/drivetrain efficiency. Equivalently,
+
+```math
+T_{w,s}
+\approx
+K_{t,w,s} I_s
+```
+
+with the effective wheel-side torque constant
+
+```math
+K_{t,w,s}
+\approx
+\eta_{g,s} N_s K_{t,m,s}.
+```
+
+The value of $K_{t,w,s}$ should be treated as a calibrated actuator parameter. Gearbox efficiency, average drivetrain losses, and motor-to-wheel torque conversion are therefore lumped into this effective wheel-side torque constant.
+
+If a loss model is identified later, the wheel-side torque model may be written more generally as
+
+```math
+T_{w,s}
+\approx
+K_{t,w,s} I_s
+-
+T_{\mathrm{loss},s}
+```
+
+where $T_{\mathrm{loss},s}$ is a signed equivalent wheel-side loss torque. In the nominal implementation, this loss term is not controlled directly and is treated as part of the actuator uncertainty or absorbed into the calibrated value of $K_{t,w,s}$.
+
+The commanded wheel torque is converted into a current command by
+
+```math
+I_{s,\mathrm{cmd}}
+=
+\frac{
+T_{s,\mathrm{cmd}}
+}{
+K_{t,w,s}
+}
+```
+
+or, if an identified loss compensation term is used,
+
+```math
+I_{s,\mathrm{cmd}}
+=
+\frac{
+T_{s,\mathrm{cmd}}
++
+\hat{T}_{\mathrm{loss},s}
+}{
+K_{t,w,s}
+}.
+```
+
+For the left and right wheels,
 
 ```math
 I_{\mathrm{cmd}}
 =
-\frac{T_{\mathrm{cmd}}}{K_t}
+\begin{bmatrix}
+I_{L,\mathrm{cmd}}
+\\
+I_{R,\mathrm{cmd}}
+\end{bmatrix}
 ```
 
-If this assumption is not valid, actuator dynamics may be added later, for example:
+is the current-command vector passed to the actuator-control layer.
+
+The motor electrical dynamics for each side may be approximated by
 
 ```math
-\dot{T}_{\mathrm{actual}}
+V_{m,s}
 =
-\frac{
-T_{\mathrm{cmd}}
--
-T_{\mathrm{actual}}
-}{
-\tau_m
-}
+R_{m,s} I_s
++
+L_{m,s}\dot{I}_s
++
+K_{e,m,s}\omega_{m,s}
 ```
+
+where $V_{m,s}$ is the motor terminal voltage, $R_{m,s}$ is the motor winding resistance, $L_{m,s}$ is the motor winding inductance, and $K_{e,m,s}$ is the motor back-EMF constant.
+
+Equivalently,
+
+```math
+\dot{I}_s
+=
+-\frac{R_{m,s}}{L_{m,s}} I_s
++
+\frac{1}{L_{m,s}} V_{m,s}
+-
+\frac{K_{e,m,s}}{L_{m,s}} \omega_{m,s}.
+```
+
+The back-EMF term depends on motor speed and acts as a disturbance to current regulation. It may be compensated later using feedforward if needed.
+
+Ignoring switching ripple, the average motor terminal voltage is approximated by
+
+```math
+V_{m,s}
+\approx
+d_s V_b
+```
+
+where $d_s$ is the signed PWM duty command and $V_b$ is the battery voltage. The duty command satisfies
+
+```math
+-1
+\leq
+d_s
+\leq
+1.
+```
+
+The measured current is modeled as
+
+```math
+I_{s,\mathrm{meas}}
+=
+I_s
++
+n_{I,s}
+```
+
+where $n_{I,s}$ represents current-sensor noise and residual offset error after calibration.
+
+The current tracking error is
+
+```math
+e_{I,s}
+=
+I_{s,\mathrm{cmd}}
+-
+I_{s,\mathrm{meas}}.
+```
+
+The actuator-control loop uses a PI current controller for each motor:
+
+```math
+V_{s,\mathrm{cmd}}
+=
+K_{p,I,s}e_{I,s}
++
+K_{i,I,s}
+\int e_{I,s}dt
+```
+
+where $V_{s,\mathrm{cmd}}$ is the commanded average motor voltage before conversion to PWM duty.
+
+The corresponding signed PWM duty command is
+
+```math
+d_{s,\mathrm{cmd}}
+=
+\operatorname{sat}_{[-1,1]}
+\left(
+\frac{
+V_{s,\mathrm{cmd}}
+}{
+V_b
+}
+\right).
+```
+
+In discrete time, the current-controller integrator is updated as
+
+```math
+\eta_{I,s}[k+1]
+=
+\eta_{I,s}[k]
++
+T_{s,I}e_{I,s}[k]
+```
+
+and the voltage command is
+
+```math
+V_{s,\mathrm{cmd}}[k]
+=
+K_{p,I,s}e_{I,s}[k]
++
+K_{i,I,s}\eta_{I,s}[k].
+```
+
+Here, $T_{s,I}$ is the actuator-control sample time. The actuator-control loop is designed to run faster than the motion-control loop so that motor current tracks the commanded current with small delay.
+
+The actuator-control layer is not formulated as an RSLQR problem. It is a directly measured current-regulation problem. The RSLQR controller handles the coupled unstable robot motion, while the actuator controller handles the lower-level motor-drive task of making the measured current follow the current command derived from the requested wheel torque.
+
+Under this architecture, the motion-control model uses wheel-side torque as the effective plant input, and the actuator-control layer is responsible for making the physical motor-drive system approximate that commanded torque as closely as possible.
 
 ---
 
