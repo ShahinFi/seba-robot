@@ -436,57 +436,40 @@ I_wW^2
 W^2m_wr_w^2.
 ```
 
-Then the linearized state matrix is
+The linearized state matrix is
 
 ```math
 A
 =
 \begin{bmatrix}
-A_{11} & A_{12} & A_{13} & 0
-\\
-0 & 0 & 1 & 0
-\\
-A_{31} & A_{32} & A_{33} & 0
-\\
-0 & 0 & 0 & A_{44}
-\end{bmatrix}
-```
-
-where
-
-```math
-A_{11}
-=
 -\frac{
 2c\left(m_pl_p^2 + m_pr_wl_p + I_{py}\right)
 }{
 \Delta
-},
-```
-
-```math
-A_{12}
-=
+}
+&
 -\frac{
 gl_p^2m_p^2r_w^2
 }{
 \Delta
-},
-```
-
-```math
-A_{13}
-=
+}
+&
 \frac{
 2cr_w\left(m_pl_p^2 + m_pr_wl_p + I_{py}\right)
 }{
 \Delta
-},
-```
-
-```math
-A_{31}
-=
+}
+&
+0
+\\
+0
+&
+0
+&
+1
+&
+0
+\\
 \frac{
 4I_wc
 +
@@ -497,39 +480,34 @@ A_{31}
 2cl_pm_pr_w
 }{
 r_w\Delta
-},
-```
-
-```math
-A_{32}
-=
+}
+&
 \frac{
 gl_pm_p\left(2I_w + m_pr_w^2 + 2m_wr_w^2\right)
 }{
 \Delta
-},
-```
-
-```math
-A_{33}
-=
+}
+&
 -\frac{
 2c\left(2I_w + m_pr_w^2 + 2m_wr_w^2 + l_pm_pr_w\right)
 }{
 \Delta
-},
-```
-
-and
-
-```math
-A_{44}
-=
+}
+&
+0
+\\
+0
+&
+0
+&
+0
+&
 -\frac{
 cW^2
 }{
 \Gamma
-}.
+}
+\end{bmatrix}.
 ```
 
 The linearized input matrix is
@@ -538,48 +516,46 @@ The linearized input matrix is
 B
 =
 \begin{bmatrix}
-B_{11} & B_{11}
-\\
-0 & 0
-\\
-B_{31} & B_{31}
-\\
--B_{41} & B_{41}
-\end{bmatrix}
-```
-
-where
-
-```math
-B_{11}
-=
 \frac{
 r_w\left(m_pl_p^2 + m_pr_wl_p + I_{py}\right)
 }{
 \Delta
-},
-```
-
-```math
-B_{31}
-=
+}
+&
+\frac{
+r_w\left(m_pl_p^2 + m_pr_wl_p + I_{py}\right)
+}{
+\Delta
+}
+\\
+0
+&
+0
+\\
 -\frac{
 2I_w + m_pr_w^2 + 2m_wr_w^2 + l_pm_pr_w
 }{
 \Delta
-},
-```
-
-and
-
-```math
-B_{41}
-=
+}
+&
+-\frac{
+2I_w + m_pr_w^2 + 2m_wr_w^2 + l_pm_pr_w
+}{
+\Delta
+}
+\\
+-\frac{
+Wr_w
+}{
+\Gamma
+}
+&
 \frac{
 Wr_w
 }{
 \Gamma
-}.
+}
+\end{bmatrix}.
 ```
 
 The first and third rows of $B$ have identical left and right torque columns, so the forward and pitch dynamics are driven by the equal-torque component $T_L + T_R$. The fourth row has opposite signs, so the yaw dynamics are driven by the differential-torque component $T_R - T_L$.
