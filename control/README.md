@@ -916,19 +916,19 @@ When a torque component reaches its limit, only torque-rate commands that drive 
 
 ## 9. Actuator Control and Torque Realization
 
-The RSLQR controller produces commanded wheel-side torques:
+The RSLQR controller produces the wheel-side torque control input
 
 ```math
-U_{\mathrm{cmd}}
+U
 =
 \begin{bmatrix}
-T_{L,\mathrm{cmd}}
+T_L
 \\
-T_{R,\mathrm{cmd}}
+T_R
 \end{bmatrix}
 ```
 
-Wheel torque is not measured directly. The actuator controller realizes $U_{\mathrm{cmd}}$ by regulating motor current and generating PWM commands.
+Wheel torque is not measured directly. The actuator controller realizes $U$ by regulating motor current and generating PWM commands.
 
 For a DC motor,
 
@@ -968,30 +968,30 @@ K_{t,w}
 
 The parameter $K_{t,w}$ is treated as a calibrated effective wheel-side torque constant. Other effects such as static friction, backlash, dead zone, and load-dependent losses are not modeled separately.
 
-For matched left and right actuators, the torque command is converted to a current command by
+For matched left and right actuators, the torque control input is converted to a current reference by
 
 ```math
-I_{\mathrm{cmd}}
+I_{\mathrm{ref}}
 =
 \frac{1}{K_{t,w}}
-U_{\mathrm{cmd}}
+U
 ```
 
 or equivalently,
 
 ```math
-I_{L,\mathrm{cmd}}
+I_{L,\mathrm{ref}}
 =
 \frac{
-T_{L,\mathrm{cmd}}
+T_L
 }{
 K_{t,w}
 },
 \qquad
-I_{R,\mathrm{cmd}}
+I_{R,\mathrm{ref}}
 =
 \frac{
-T_{R,\mathrm{cmd}}
+T_R
 }{
 K_{t,w}
 }
@@ -1014,7 +1014,7 @@ The current-control error is
 ```math
 e_I
 =
-I_{\mathrm{cmd}}
+I_{\mathrm{ref}}
 -
 I_{\mathrm{meas}}
 ```
