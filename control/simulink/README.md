@@ -15,7 +15,7 @@ The controller stabilizes the body pitch while tracking commanded forward veloci
 
 Four simulation test cases are provided to evaluate balance recovery, forward-velocity tracking, yaw-rate tracking, and combined motion tracking. Each test case includes a result plot and an animation of the corresponding multibody simulation.
 
-The complete nonlinear dynamics, reduced velocity-control model, linearization, augmented-state formulation, and RSLQR controller derivation are documented in [`../README.md`](../README.md).
+The complete nonlinear dynamics, reduced velocity-control model, linearization, augmented-state formulation, and RSLQR controller derivation are documented in the [**Dynamics and Velocity-Tracking Control Model**](../README.md).
 
 ---
 
@@ -121,11 +121,11 @@ The remaining solver settings use their configured automatic or default values.
 
 ## RSLQR Controller
 
-The simulation uses the robust servomechanism LQR controller derived in [`../README.md`](../README.md).
+The simulation uses the robust servomechanism LQR controller derived in the [**Dynamics and Velocity-Tracking Control Model**](../README.md).
 
-The controller receives the robot state and motion commands, calculates the left- and right-wheel torque-rate commands, and integrates them to produce the wheel torque commands applied to the Robot Plant.
+The controller receives the robot state and motion commands, calculates the left- and right-wheel torque-rate commands, and integrates them to produce the wheel torque commands applied to the `Robot Plant`.
 
-### Controller Gain
+### Controller Weights and Gain
 
 The `RSLQR Gain Solver` block inside the `RSLQR Controller` subsystem contains the LQR weighting matrices and controller-gain calculation.
 
@@ -182,15 +182,9 @@ Dataset signal format:    timeseries
 
 ## Running the Simulation
 
-No separate initialization script is required. All parameters and controller settings needed to run the simulation are defined within `seba_control.slx`.
+No separate initialization script is required. All parameters and controller settings needed to run the simulation are defined within [`seba_control.slx`](seba_control.slx).
 
-Open:
-
-```text
-seba_control.slx
-```
-
-Run the model from MATLAB using:
+Open [`seba_control.slx`](seba_control.slx) in MATLAB and run the model from Simulink, or use:
 
 ```matlab
 out = sim(bdroot);
@@ -223,11 +217,11 @@ Four test cases are provided:
 
 For each test, replace the code in the `Motion Command Profile` MATLAB Function block with the corresponding command-generation code shown below.
 
-The result plots show the commanded and measured motion, body pitch response, and left- and right-wheel torque commands. The linked animations show the corresponding motion of the Simscape Multibody robot.
+The result plots compare the commanded and measured forward velocity and yaw rate, and also show the body pitch angle and left- and right-wheel torque commands. The animations show the corresponding motion of the Simscape Multibody robot.
 
 ---
 
-## 1. Balance Recovery
+### 1. Balance Recovery
 
 This test evaluates recovery from a nonzero initial body pitch while both motion commands remain zero.
 
@@ -242,7 +236,7 @@ Set the controller pitch-state initial condition to:
 25*pi/180
 ```
 
-Set the physical Robot Plant to the same initial pitch orientation.
+Set the physical `Robot Plant` to the same initial pitch orientation.
 
 Use the following command profile:
 
@@ -258,16 +252,15 @@ r = [v_cmd; psi_dot_cmd];
 end
 ```
 
-### Results
+#### Results
 
 ![Balance-recovery simulation results](results/balance_recovery.png)
-
 
 https://github.com/user-attachments/assets/89c90fc0-672e-4a1e-967c-56522fc81074
 
 ---
 
-## 2. Forward-Velocity Tracking
+### 2. Forward-Velocity Tracking
 
 This test evaluates positive and negative forward-velocity tracking while the yaw-rate command remains zero.
 
@@ -301,16 +294,15 @@ r = [v_cmd; psi_dot_cmd];
 end
 ```
 
-### Results
+#### Results
 
 ![Forward-velocity tracking results](results/velocity_tracking.png)
-
 
 https://github.com/user-attachments/assets/76125c0e-3c0d-4408-8e89-157bc6271e73
 
 ---
 
-## 3. Yaw-Rate Tracking
+### 3. Yaw-Rate Tracking
 
 This test evaluates positive and negative yaw-rate tracking while the forward-velocity command remains zero.
 
@@ -344,16 +336,15 @@ r = [v_cmd; psi_dot_cmd];
 end
 ```
 
-### Results
+#### Results
 
 ![Yaw-rate tracking results](results/yaw_rate_tracking.png)
-
 
 https://github.com/user-attachments/assets/1d5f8abd-a08b-45f7-8c4c-cebc3ddd0b60
 
 ---
 
-## 4. Combined Motion Tracking
+### 4. Combined Motion Tracking
 
 This test evaluates simultaneous forward-velocity and yaw-rate tracking.
 
@@ -394,10 +385,9 @@ r = [v_cmd; psi_dot_cmd];
 end
 ```
 
-### Results
+#### Results
 
 ![Combined motion-tracking results](results/combined_motion_tracking.png)
-
 
 https://github.com/user-attachments/assets/7f919d5b-edf8-4cf7-b23b-a4d0317f5f51
 
