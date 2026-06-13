@@ -159,24 +159,6 @@ The `lqr` calculation in the `RSLQR Gain Solver` block is disabled during normal
 
 ---
 
-## Motion Command Profile
-
-The Motion Command Profile block outputs:
-
-```math
-r =
-\begin{bmatrix}
-v_{\mathrm{cmd}} \\
-\dot{\psi}_{\mathrm{cmd}}
-\end{bmatrix}
-```
-
-The MATLAB Function code in this block is changed according to the validation scenario being run.
-
-The command changes are implemented as discrete levels rather than ramps so the transient response, tracking behavior, overshoot, and settling behavior remain visible in the results.
-
----
-
 ## Logged Signals
 
 The following named vector signals are logged:
