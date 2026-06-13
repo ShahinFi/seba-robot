@@ -263,7 +263,7 @@ end
 ![Balance-recovery simulation results](results/balance_recovery.png)
 
 
-https://github.com/user-attachments/assets/2c1abbe3-19a0-4441-a46d-779e4ad38006
+https://github.com/user-attachments/assets/75b48109-42ff-4eea-9f49-9177135ff2d3
 
 ---
 
@@ -306,7 +306,7 @@ end
 ![Forward-velocity tracking results](results/velocity_tracking.png)
 
 
-https://github.com/user-attachments/assets/43c1482f-5c53-437d-946d-bbe1ad66117a
+https://github.com/user-attachments/assets/76125c0e-3c0d-4408-8e89-157bc6271e73
 
 ---
 
@@ -349,7 +349,7 @@ end
 ![Yaw-rate tracking results](results/yaw_rate_tracking.png)
 
 
-https://github.com/user-attachments/assets/bfe28bc2-a84f-4c7e-a3cb-bf76484f160a
+https://github.com/user-attachments/assets/1d5f8abd-a08b-45f7-8c4c-cebc3ddd0b60
 
 ---
 
@@ -399,7 +399,7 @@ end
 ![Combined motion-tracking results](results/combined_motion_tracking.png)
 
 
-https://github.com/user-attachments/assets/ab623e77-44af-483a-9560-58e8aedc9776
+https://github.com/user-attachments/assets/7f919d5b-edf8-4cf7-b23b-a4d0317f5f51
 
 ---
 
