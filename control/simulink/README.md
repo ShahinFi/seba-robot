@@ -262,6 +262,7 @@ end
 
 ![Balance-recovery simulation results](results/balance_recovery.png)
 
+
 https://github.com/user-attachments/assets/2c1abbe3-19a0-4441-a46d-779e4ad38006
 
 ---
@@ -304,7 +305,8 @@ end
 
 ![Forward-velocity tracking results](results/velocity_tracking.png)
 
-[View the forward-velocity tracking animation](results/velocity_tracking.mp4)
+
+https://github.com/user-attachments/assets/43c1482f-5c53-437d-946d-bbe1ad66117a
 
 ---
 
@@ -346,7 +348,8 @@ end
 
 ![Yaw-rate tracking results](results/yaw_rate_tracking.png)
 
-[View the yaw-rate tracking animation](results/yaw_rate_tracking.mp4)
+
+https://github.com/user-attachments/assets/bfe28bc2-a84f-4c7e-a3cb-bf76484f160a
 
 ---
 
@@ -395,7 +398,8 @@ end
 
 ![Combined motion-tracking results](results/combined_motion_tracking.png)
 
-[View the combined motion-tracking animation](results/combined_motion_tracking.mp4)
+
+https://github.com/user-attachments/assets/ab623e77-44af-483a-9560-58e8aedc9776
 
 ---
 
