@@ -45,6 +45,9 @@ The combined-motion test evaluates simultaneous forward-velocity and yaw-rate tr
 
 ![Combined motion-tracking results](control/simulink/results/combined_motion_tracking.png)
 
+
+https://github.com/user-attachments/assets/7f919d5b-edf8-4cf7-b23b-a4d0317f5f51
+
 Plots and simulation animations for all four test cases are available in the [simulation documentation](control/simulink/README.md#simulation-test-cases).
 
 ---
