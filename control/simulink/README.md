@@ -263,7 +263,7 @@ end
 ![Balance-recovery simulation results](results/balance_recovery.png)
 
 
-https://github.com/user-attachments/assets/75b48109-42ff-4eea-9f49-9177135ff2d3
+https://github.com/user-attachments/assets/89c90fc0-672e-4a1e-967c-56522fc81074
 
 ---
 
