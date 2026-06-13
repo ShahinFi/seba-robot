@@ -26,7 +26,7 @@ Nonlinear robot dynamics, reduced control model, linearization, and robust servo
 
 ### Simulink Simulation
 
-[**Simulink Simulation and Test Results**](control/simulink/README.md)
+[**Simulink Simulation**](control/simulink/README.md)
 
 Simulation model configuration, controller settings, test procedures, result plots, and animations.
 
