@@ -36,19 +36,19 @@ The controller gain is hardcoded for normal simulation, so Control System Toolbo
 
 The following rigid-body and physical parameters are used by the simulation and controller model:
 
-| Parameter | Description | Value |
+| Symbol | Meaning | Value |
 |---|---|---:|
-| \(m_p\) | Body mass | \(2.90\ \mathrm{kg}\) |
-| \(m_w\) | Mass of each wheel | \(0.050\ \mathrm{kg}\) |
-| \(l_p\) | Wheel-axis to body center-of-mass distance | \(0.125\ \mathrm{m}\) |
-| \(r_w\) | Wheel radius | \(0.035\ \mathrm{m}\) |
-| \(W\) | Wheel center-to-center separation | \(0.10\ \mathrm{m}\) |
-| \(I_{py}\) | Body pitch-axis moment of inertia | \(0.01752\ \mathrm{kg\,m^2}\) |
-| \(I_{pz}\) | Body yaw-axis moment of inertia | \(0.00483\ \mathrm{kg\,m^2}\) |
-| \(I_w\) | Wheel rolling-axis moment of inertia | \(3.0625\times10^{-5}\ \mathrm{kg\,m^2}\) |
-| \(J_w\) | Wheel vertical-axis moment of inertia | \(1.90625\times10^{-5}\ \mathrm{kg\,m^2}\) |
-| \(c\) | Wheel rotational damping coefficient | \(0.0005\ \mathrm{N\,m\,s/rad}\) |
-| \(g\) | Gravitational acceleration | \(9.81\ \mathrm{m/s^2}\) |
+| $m_p$ | body mass | $2.90\ \mathrm{kg}$ |
+| $m_w$ | mass of each wheel | $0.050\ \mathrm{kg}$ |
+| $l_p$ | distance from the wheel axle to the body center of mass | $0.125\ \mathrm{m}$ |
+| $r_w$ | wheel radius | $0.035\ \mathrm{m}$ |
+| $W$ | wheel center-to-center separation | $0.10\ \mathrm{m}$ |
+| $I_{py}$ | body moment of inertia about the pitch axis | $0.01752\ \mathrm{kg\,m^2}$ |
+| $I_{pz}$ | body moment of inertia about the yaw axis | $0.00483\ \mathrm{kg\,m^2}$ |
+| $I_w$ | wheel moment of inertia about the rolling axis | $3.0625 \times 10^{-5}\ \mathrm{kg\,m^2}$ |
+| $J_w$ | wheel moment of inertia about the vertical axis | $1.90625 \times 10^{-5}\ \mathrm{kg\,m^2}$ |
+| $c$ | wheel rotational damping coefficient | $0.0005\ \mathrm{N\,m\,s/rad}$ |
+| $g$ | gravitational acceleration | $9.81\ \mathrm{m/s^2}$ |
 
 ---
 
