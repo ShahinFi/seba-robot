@@ -230,13 +230,21 @@ Initial pitch angle: 25 deg
 Simulation stop time: 7 s
 ```
 
-Set the controller pitch-state initial condition to:
+Inside the `Robot Plant`, set the initial condition of the `1/s` pitch-angle integrator connected to `Transform Sensor1` to:
 
 ```matlab
 25*pi/180
 ```
 
-Set the physical `Robot Plant` to the same initial pitch orientation.
+Set the rotation angle of both `Rigid Transform7` and `Rigid Transform8` to:
+
+```text
+Method: Standard Axis
+Angle:  25 deg
+Axis:   +X
+```
+
+These two rigid transforms belong to the left- and right-wheel branches. Using the same initial angle in the pitch integrator and both rigid transforms keeps the measured pitch state consistent with the initial Simscape Multibody configuration.
 
 Use the following command profile:
 
