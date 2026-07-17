@@ -13,7 +13,7 @@ The implemented work covers five main areas:
 - **Robot modeling:** nonlinear forward, pitch, and yaw dynamics, together with a reduced model and linearization for control design
 - **Motion control:** a robust servomechanism LQR controller for pitch stabilization, forward-velocity tracking, and yaw-rate tracking
 - **Simulation and evaluation:** a nonlinear Simulink and Simscape Multibody model with four documented test cases, result plots, and animations
-- **Hardware system:** documented electrical hardware, power distribution, STM32 pin connections, motor driver, sensors, and physical construction
+- **Hardware system:** built physical robot hardware, including power distribution, STM32 connections, motor driver, sensors, wiring, and mechanical electronics layout
 - **STM32 firmware:** PlatformIO firmware for hardware bring-up, motor control, encoder reading, IMU acquisition, current sensing, and serial console commands
 
 ---
@@ -90,7 +90,7 @@ seba-robot/
 - `control/simulink/` contains the simulation model, simulation documentation, and test results.
 - `docs/` contains supporting project documents.
 - `firmware/stm32/` contains the STM32G474RE PlatformIO firmware.
-- `hardware/` contains the documented electrical hardware, wiring, power system, and physical construction.
+- `hardware/` contains documentation for the built robot hardware, including electronics, wiring, power distribution, and physical construction.
 
 ---
 
