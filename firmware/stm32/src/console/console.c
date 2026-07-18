@@ -1,6 +1,7 @@
 #include "console.h"
 
 #include "control/actuator/actuator.h"
+#include "control/state_estimation/state_estimation.h"
 #include "serial/serial.h"
 #include "tests/current_sensor_test.h"
 #include "tests/encoder_test.h"
@@ -48,6 +49,11 @@ static void Console_HandleActuator(
     char *arguments[]
 );
 
+static void Console_HandleState(
+    int argument_count,
+    char *arguments[]
+);
+
 static void Console_HandleIMU(
     int argument_count,
     char *arguments[]
@@ -67,6 +73,7 @@ static bool Console_ParseInt32(
 
 static void Console_PrintActuatorConfig(void);
 static void Console_PrintActuatorStatus(void);
+static void Console_PrintState(void);
 static void Console_PrintHelp(void);
 static void Console_PrintPrompt(void);
 
@@ -264,6 +271,16 @@ static void Console_ExecuteLine(char *line)
         return;
     }
 
+    if (strcmp(arguments[0], "state") == 0)
+    {
+        Console_HandleState(
+            argument_count,
+            arguments
+        );
+
+        return;
+    }
+
     if (strcmp(arguments[0], "imu") == 0)
     {
         Console_HandleIMU(
@@ -431,6 +448,7 @@ static void Console_HandleEncoder(
     if (strcmp(arguments[1], "reset") == 0)
     {
         EncoderTest_ResetPositions();
+        StateEstimation_Reset();
 
         return;
     }
@@ -903,6 +921,26 @@ static void Console_HandleIMU(
     }
 }
 
+static void Console_HandleState(
+    int argument_count,
+    char *arguments[]
+)
+{
+    if (
+        argument_count != 2 ||
+        strcmp(arguments[1], "read") != 0
+    )
+    {
+        Serial_WriteLine(
+            "ERROR: usage: state read"
+        );
+
+        return;
+    }
+
+    Console_PrintState();
+}
+
 static bool Console_ParseSpeed(
     const char *text,
     int16_t *speed
@@ -1077,6 +1115,56 @@ static void Console_PrintActuatorStatus(void)
     Serial_WriteLine("");
 }
 
+static void Console_PrintState(void)
+{
+    RobotState state;
+
+    StateEstimation_GetState(
+        &state
+    );
+
+    Serial_Write("State: valid=");
+    Serial_Write(state.valid ? "yes" : "no");
+
+    Serial_Write(" imu=");
+    Serial_Write(state.imu_valid ? "yes" : "no");
+
+    Serial_Write(" encoder=");
+    Serial_Write(state.encoder_valid ? "yes" : "no");
+
+    Serial_Write(" updates=");
+    Serial_WriteUInt32(state.update_count);
+    Serial_WriteLine("");
+
+    Serial_Write("  v [m/s]: ");
+    Serial_WriteFloat3(state.forward_velocity_mps);
+    Serial_WriteLine("");
+
+    Serial_Write("  theta [rad]: ");
+    Serial_WriteFloat3(state.pitch_rad);
+    Serial_WriteLine("");
+
+    Serial_Write("  theta_dot [rad/s]: ");
+    Serial_WriteFloat3(state.pitch_rate_rads);
+    Serial_WriteLine("");
+
+    Serial_Write("  psi_dot [rad/s]: ");
+    Serial_WriteFloat3(state.yaw_rate_rads);
+    Serial_WriteLine("");
+
+    Serial_Write("  v_dot [m/s^2]: ");
+    Serial_WriteFloat3(state.forward_acceleration_mps2);
+    Serial_WriteLine("");
+
+    Serial_Write("  theta_ddot [rad/s^2]: ");
+    Serial_WriteFloat3(state.pitch_acceleration_rads2);
+    Serial_WriteLine("");
+
+    Serial_Write("  psi_ddot [rad/s^2]: ");
+    Serial_WriteFloat3(state.yaw_acceleration_rads2);
+    Serial_WriteLine("");
+}
+
 static void Console_PrintHelp(void)
 {
     Serial_WriteLine("Commands:");
@@ -1167,6 +1255,10 @@ static void Console_PrintHelp(void)
 
     Serial_WriteLine(
         "  actuator torque-constant <mNm_per_A>"
+    );
+
+    Serial_WriteLine(
+        "  state read"
     );
 
     Serial_WriteLine(

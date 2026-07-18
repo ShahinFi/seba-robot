@@ -1,6 +1,7 @@
 #include "stm32g4xx_hal.h"
 
 #include "control/actuator/actuator.h"
+#include "control/state_estimation/state_estimation.h"
 #include "console/console.h"
 #include "current_sensor/current_sensor.h"
 #include "encoder/encoder.h"
@@ -43,6 +44,8 @@ int main(void)
     const bool imu_initialized =
         IMU_Init();
 
+    StateEstimation_Init();
+
     if (imu_initialized)
     {
         Serial_WriteLine(
@@ -65,8 +68,6 @@ int main(void)
 
     while (1)
     {
-        Encoder_Update();
-
         if (imu_initialized)
         {
             IMU_Process();

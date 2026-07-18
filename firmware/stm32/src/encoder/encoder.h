@@ -6,8 +6,8 @@
 void Encoder_Init(void);
 
 /*
- * Call regularly from the main loop to transfer wrapping
- * hardware counts into signed accumulated positions.
+ * Transfers wrapping hardware counts into signed accumulated
+ * positions. The state estimator calls this at its fixed rate.
  */
 void Encoder_Update(void);
 

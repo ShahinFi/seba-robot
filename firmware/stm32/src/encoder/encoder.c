@@ -41,6 +41,9 @@ static int32_t Encoder_CalculateDelta(
     uint16_t previous_count
 );
 
+static uint32_t Encoder_EnterCritical(void);
+static void Encoder_ExitCritical(uint32_t interrupt_state);
+
 void Encoder_Init(void)
 {
     Encoder_GPIO_Init();
@@ -61,19 +64,26 @@ void Encoder_Init(void)
 
 void Encoder_Update(void)
 {
-    const uint16_t current_left_count =
+    uint16_t current_left_count;
+    uint16_t current_right_count;
+    int32_t left_delta;
+    int32_t right_delta;
+    const uint32_t interrupt_state =
+        Encoder_EnterCritical();
+
+    current_left_count =
         (uint16_t)TIM2->CNT;
 
-    const uint16_t current_right_count =
+    current_right_count =
         (uint16_t)TIM8->CNT;
 
-    const int32_t left_delta =
+    left_delta =
         Encoder_CalculateDelta(
             current_left_count,
             previous_left_count
         );
 
-    const int32_t right_delta =
+    right_delta =
         Encoder_CalculateDelta(
             current_right_count,
             previous_right_count
@@ -87,20 +97,49 @@ void Encoder_Update(void)
 
     previous_left_count = current_left_count;
     previous_right_count = current_right_count;
+
+    Encoder_ExitCritical(
+        interrupt_state
+    );
 }
 
 int64_t Encoder_GetLeftPosition(void)
 {
-    return left_position;
+    int64_t position;
+    const uint32_t interrupt_state =
+        Encoder_EnterCritical();
+
+    position =
+        left_position;
+
+    Encoder_ExitCritical(
+        interrupt_state
+    );
+
+    return position;
 }
 
 int64_t Encoder_GetRightPosition(void)
 {
-    return right_position;
+    int64_t position;
+    const uint32_t interrupt_state =
+        Encoder_EnterCritical();
+
+    position =
+        right_position;
+
+    Encoder_ExitCritical(
+        interrupt_state
+    );
+
+    return position;
 }
 
 void Encoder_ResetLeft(void)
 {
+    const uint32_t interrupt_state =
+        Encoder_EnterCritical();
+
     /*
      * Discard any movement that occurred since the most
      * recent update, then establish the current position
@@ -108,12 +147,23 @@ void Encoder_ResetLeft(void)
      */
     previous_left_count = (uint16_t)TIM2->CNT;
     left_position = 0;
+
+    Encoder_ExitCritical(
+        interrupt_state
+    );
 }
 
 void Encoder_ResetRight(void)
 {
+    const uint32_t interrupt_state =
+        Encoder_EnterCritical();
+
     previous_right_count = (uint16_t)TIM8->CNT;
     right_position = 0;
+
+    Encoder_ExitCritical(
+        interrupt_state
+    );
 }
 
 void Encoder_ResetAll(void)
@@ -268,4 +318,21 @@ static void Encoder_TIM8_Init(void)
 
     TIM8->EGR = TIM_EGR_UG;
     TIM8->CR1 |= TIM_CR1_CEN;
+}
+
+static uint32_t Encoder_EnterCritical(void)
+{
+    const uint32_t interrupt_state =
+        __get_PRIMASK();
+
+    __disable_irq();
+
+    return interrupt_state;
+}
+
+static void Encoder_ExitCritical(uint32_t interrupt_state)
+{
+    __set_PRIMASK(
+        interrupt_state
+    );
 }

@@ -2,6 +2,8 @@
 
 #include "imu_transport.h"
 
+#include "stm32g4xx_hal.h"
+
 #include "sh2.h"
 #include "sh2_SensorValue.h"
 #include "sh2_err.h"
@@ -42,7 +44,7 @@
  * Sign constants define the robot-positive pitch and yaw
  * convention.
  */
-#define ROBOT_PITCH_SIGN   1.0F
+#define ROBOT_PITCH_SIGN  -1.0F
 #define ROBOT_YAW_SIGN     1.0F
 
 static IMUData latest_data;
@@ -65,9 +67,9 @@ static bool IMU_EnableReport(
     uint32_t interval_us
 );
 
-static void IMU_UpdateRobotAngles(void);
-
 static void IMU_ClearData(void);
+static uint32_t IMU_EnterCritical(void);
+static void IMU_ExitCritical(uint32_t interrupt_state);
 
 bool IMU_Init(void)
 {
@@ -177,6 +179,8 @@ bool IMU_GetLatest(
     IMUData *data
 )
 {
+    uint32_t interrupt_state;
+
     if (data == NULL)
     {
         return false;
@@ -187,7 +191,14 @@ bool IMU_GetLatest(
         return false;
     }
 
+    interrupt_state =
+        IMU_EnterCritical();
+
     *data = latest_data;
+
+    IMU_ExitCritical(
+        interrupt_state
+    );
 
     return true;
 }
@@ -211,11 +222,18 @@ static void IMU_AsyncEventCallback(
 
     if (event->eventId == SH2_RESET)
     {
+        const uint32_t interrupt_state =
+            IMU_EnterCritical();
+
         imu_reset_detected = true;
 
         latest_data.acceleration_valid = false;
         latest_data.gyroscope_valid = false;
         latest_data.orientation_valid = false;
+
+        IMU_ExitCritical(
+            interrupt_state
+        );
     }
 }
 
@@ -245,6 +263,9 @@ static void IMU_SensorCallback(
     {
         case SH2_ACCELEROMETER:
         {
+            const uint32_t interrupt_state =
+                IMU_EnterCritical();
+
             /*
              * Store accelerometer values in the sensor's
              * mounted physical axes.
@@ -266,11 +287,18 @@ static void IMU_SensorCallback(
 
             latest_data.acceleration_valid = true;
 
+            IMU_ExitCritical(
+                interrupt_state
+            );
+
             break;
         }
 
         case SH2_GYROSCOPE_CALIBRATED:
         {
+            const uint32_t interrupt_state =
+                IMU_EnterCritical();
+
             latest_data.angular_velocity_x_rads =
                 value.un.gyroscope.x;
 
@@ -304,11 +332,30 @@ static void IMU_SensorCallback(
 
             latest_data.gyroscope_valid = true;
 
+            IMU_ExitCritical(
+                interrupt_state
+            );
+
             break;
         }
 
         case SH2_GAME_ROTATION_VECTOR:
         {
+            const float w =
+                value.un.gameRotationVector.real;
+
+            const float x =
+                value.un.gameRotationVector.i;
+
+            const float y =
+                value.un.gameRotationVector.j;
+
+            const float z =
+                value.un.gameRotationVector.k;
+
+            float robot_pitch_rad;
+            float robot_yaw_rad;
+
             /*
              * CEVA SH-2 quaternion field names:
              *
@@ -317,17 +364,40 @@ static void IMU_SensorCallback(
              * j    = y
              * k    = z
              */
+            robot_pitch_rad =
+                ROBOT_PITCH_SIGN *
+                atan2f(
+                    2.0F * (w * x + y * z),
+                    1.0F - 2.0F * (x * x + y * y)
+                );
+
+            robot_yaw_rad =
+                ROBOT_YAW_SIGN *
+                atan2f(
+                    2.0F * (w * z + x * y),
+                    1.0F - 2.0F * (y * y + z * z)
+                );
+
+            const uint32_t interrupt_state =
+                IMU_EnterCritical();
+
             latest_data.quaternion_w =
-                value.un.gameRotationVector.real;
+                w;
 
             latest_data.quaternion_x =
-                value.un.gameRotationVector.i;
+                x;
 
             latest_data.quaternion_y =
-                value.un.gameRotationVector.j;
+                y;
 
             latest_data.quaternion_z =
-                value.un.gameRotationVector.k;
+                z;
+
+            latest_data.robot_pitch_rad =
+                robot_pitch_rad;
+
+            latest_data.robot_yaw_rad =
+                robot_yaw_rad;
 
             latest_data.orientation_accuracy =
                 value.status & 0x03U;
@@ -337,7 +407,9 @@ static void IMU_SensorCallback(
 
             latest_data.orientation_valid = true;
 
-            IMU_UpdateRobotAngles();
+            IMU_ExitCritical(
+                interrupt_state
+            );
 
             break;
         }
@@ -392,48 +464,35 @@ static bool IMU_EnableReport(
            ) == SH2_OK;
 }
 
-static void IMU_UpdateRobotAngles(void)
-{
-    const float w =
-        latest_data.quaternion_w;
-
-    const float x =
-        latest_data.quaternion_x;
-
-    const float y =
-        latest_data.quaternion_y;
-
-    const float z =
-        latest_data.quaternion_z;
-
-    /*
-     * Quaternion roll corresponds to robot pitch because
-     * sensor X points sideways.
-     */
-    latest_data.robot_pitch_rad =
-        ROBOT_PITCH_SIGN *
-        atan2f(
-            2.0F * (w * x + y * z),
-            1.0F - 2.0F * (x * x + y * y)
-        );
-
-    /*
-     * Quaternion yaw corresponds to robot yaw because sensor Z
-     * points upward.
-     */
-    latest_data.robot_yaw_rad =
-        ROBOT_YAW_SIGN *
-        atan2f(
-            2.0F * (w * z + x * y),
-            1.0F - 2.0F * (y * y + z * z)
-        );
-}
-
 static void IMU_ClearData(void)
 {
+    const uint32_t interrupt_state =
+        IMU_EnterCritical();
+
     memset(
         &latest_data,
         0,
         sizeof(latest_data)
+    );
+
+    IMU_ExitCritical(
+        interrupt_state
+    );
+}
+
+static uint32_t IMU_EnterCritical(void)
+{
+    const uint32_t interrupt_state =
+        __get_PRIMASK();
+
+    __disable_irq();
+
+    return interrupt_state;
+}
+
+static void IMU_ExitCritical(uint32_t interrupt_state)
+{
+    __set_PRIMASK(
+        interrupt_state
     );
 }
