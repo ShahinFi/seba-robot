@@ -1,5 +1,6 @@
 #include "console.h"
 
+#include "control/actuator/actuator.h"
 #include "serial/serial.h"
 #include "tests/current_sensor_test.h"
 #include "tests/encoder_test.h"
@@ -42,6 +43,11 @@ static void Console_HandleCurrent(
     char *arguments[]
 );
 
+static void Console_HandleActuator(
+    int argument_count,
+    char *arguments[]
+);
+
 static void Console_HandleIMU(
     int argument_count,
     char *arguments[]
@@ -52,6 +58,15 @@ static bool Console_ParseSpeed(
     int16_t *speed
 );
 
+static bool Console_ParseInt32(
+    const char *text,
+    int32_t minimum,
+    int32_t maximum,
+    int32_t *value
+);
+
+static void Console_PrintActuatorConfig(void);
+static void Console_PrintActuatorStatus(void);
 static void Console_PrintHelp(void);
 static void Console_PrintPrompt(void);
 
@@ -239,6 +254,16 @@ static void Console_ExecuteLine(char *line)
         return;
     }
 
+    if (strcmp(arguments[0], "actuator") == 0)
+    {
+        Console_HandleActuator(
+            argument_count,
+            arguments
+        );
+
+        return;
+    }
+
     if (strcmp(arguments[0], "imu") == 0)
     {
         Console_HandleIMU(
@@ -298,6 +323,7 @@ static void Console_HandleMotor(
         strcmp(arguments[1], "stop") == 0
     )
     {
+        Actuator_Disable();
         MotorTest_Stop();
 
         Serial_WriteLine(
@@ -330,6 +356,8 @@ static void Console_HandleMotor(
 
     if (strcmp(arguments[1], "left") == 0)
     {
+        Actuator_Disable();
+
         if (!MotorTest_SetLeft(speed))
         {
             Serial_WriteLine(
@@ -352,6 +380,8 @@ static void Console_HandleMotor(
 
     if (strcmp(arguments[1], "right") == 0)
     {
+        Actuator_Disable();
+
         if (!MotorTest_SetRight(speed))
         {
             Serial_WriteLine(
@@ -415,26 +445,435 @@ static void Console_HandleCurrent(
     char *arguments[]
 )
 {
+    CurrentSensorChannel channel;
+    int32_t sample_count;
+
     if (
-        argument_count != 2 ||
-        strcmp(arguments[1], "read") != 0
+        argument_count == 2 &&
+        strcmp(arguments[1], "read") == 0
     )
     {
-        Serial_WriteLine(
-            "ERROR: usage: current read"
-        );
+        if (Actuator_IsEnabled())
+        {
+            Serial_WriteLine(
+                "ERROR: stop actuator control before using current read."
+            );
+
+            return;
+        }
+
+        if (!CurrentSensorTest_PrintReadings())
+        {
+            Serial_WriteLine(
+                "ERROR: current sensor read failed."
+            );
+
+            return;
+        }
 
         return;
     }
 
-    if (!CurrentSensorTest_PrintReadings())
+    if (
+        argument_count == 4 &&
+        strcmp(arguments[1], "scope") == 0
+    )
     {
-        Serial_WriteLine(
-            "ERROR: current sensor read failed."
-        );
+        if (strcmp(arguments[2], "left") == 0)
+        {
+            channel = CURRENT_SENSOR_LEFT;
+        }
+        else if (strcmp(arguments[2], "right") == 0)
+        {
+            channel = CURRENT_SENSOR_RIGHT;
+        }
+        else
+        {
+            Serial_WriteLine(
+                "ERROR: current scope channel must be 'left' or 'right'."
+            );
+
+            return;
+        }
+
+        if (!Console_ParseInt32(
+                arguments[3],
+                1,
+                10000,
+                &sample_count
+            ))
+        {
+            Serial_WriteLine(
+                "ERROR: sample count must be 1 to 10000."
+            );
+
+            return;
+        }
+
+        if (Actuator_IsEnabled())
+        {
+            Serial_WriteLine(
+                "ERROR: stop actuator control before using current scope."
+            );
+
+            return;
+        }
+
+        if (!CurrentSensorTest_PrintCapture(
+                channel,
+                (uint32_t)sample_count
+            ))
+        {
+            Serial_WriteLine(
+                "ERROR: current sensor capture failed."
+            );
+
+            return;
+        }
 
         return;
     }
+
+    Serial_WriteLine(
+        "ERROR: usage: current read OR current scope <left|right> <samples>"
+    );
+}
+
+static void Console_HandleActuator(
+    int argument_count,
+    char *arguments[]
+)
+{
+    int32_t value;
+    int32_t second_value;
+    ActuatorStatus status;
+
+    if (argument_count == 2)
+    {
+        if (strcmp(arguments[1], "stop") == 0)
+        {
+            Actuator_Disable();
+
+            Serial_WriteLine(
+                "OK: actuator current control stopped."
+            );
+
+            return;
+        }
+
+        if (strcmp(arguments[1], "status") == 0)
+        {
+            Console_PrintActuatorStatus();
+            return;
+        }
+
+        if (strcmp(arguments[1], "config") == 0)
+        {
+            Console_PrintActuatorConfig();
+            return;
+        }
+    }
+
+    if (argument_count == 3)
+    {
+        if (!Console_ParseInt32(
+                arguments[2],
+                -100000L,
+                100000L,
+                &value
+            ))
+        {
+            Serial_WriteLine(
+                "ERROR: actuator value must be an integer."
+            );
+
+            return;
+        }
+
+        Actuator_GetStatus(
+            &status
+        );
+
+        if (strcmp(arguments[1], "left") == 0)
+        {
+            if (!Actuator_SetCurrentReferences(
+                    value,
+                    status.right_current_reference_ma
+                ))
+            {
+                Serial_WriteLine(
+                    "ERROR: current reference exceeds configured limit."
+                );
+
+                return;
+            }
+
+            MotorTest_Stop();
+            Actuator_Enable();
+
+            Serial_WriteLine(
+                "OK: left current reference updated."
+            );
+
+            return;
+        }
+
+        if (strcmp(arguments[1], "right") == 0)
+        {
+            if (!Actuator_SetCurrentReferences(
+                    status.left_current_reference_ma,
+                    value
+                ))
+            {
+                Serial_WriteLine(
+                    "ERROR: current reference exceeds configured limit."
+                );
+
+                return;
+            }
+
+            MotorTest_Stop();
+            Actuator_Enable();
+
+            Serial_WriteLine(
+                "OK: right current reference updated."
+            );
+
+            return;
+        }
+
+        if (strcmp(arguments[1], "kp") == 0)
+        {
+            if (!Actuator_SetProportionalGain(value))
+            {
+                Serial_WriteLine(
+                    "ERROR: kp must be nonnegative."
+                );
+
+                return;
+            }
+
+            Serial_WriteLine("OK: actuator kp updated.");
+            return;
+        }
+
+        if (strcmp(arguments[1], "ki") == 0)
+        {
+            if (!Actuator_SetIntegralGain(value))
+            {
+                Serial_WriteLine(
+                    "ERROR: ki must be nonnegative."
+                );
+
+                return;
+            }
+
+            Serial_WriteLine("OK: actuator ki updated.");
+            return;
+        }
+
+        if (strcmp(arguments[1], "battery") == 0)
+        {
+            if (!Actuator_SetBatteryVoltage(value))
+            {
+                Serial_WriteLine(
+                    "ERROR: battery voltage must be positive."
+                );
+
+                return;
+            }
+
+            Serial_WriteLine(
+                "OK: actuator battery voltage updated."
+            );
+
+            return;
+        }
+
+        if (strcmp(arguments[1], "max-current") == 0)
+        {
+            if (!Actuator_SetMaxCurrentReference(value))
+            {
+                Serial_WriteLine(
+                    "ERROR: max current must be nonnegative."
+                );
+
+                return;
+            }
+
+            Serial_WriteLine(
+                "OK: actuator current limit updated."
+            );
+
+            return;
+        }
+
+        if (strcmp(arguments[1], "max-pwm") == 0)
+        {
+            if (
+                value < 0 ||
+                value > 100 ||
+                !Actuator_SetMaxCommandPercent(
+                    (int16_t)value
+                )
+            )
+            {
+                Serial_WriteLine(
+                    "ERROR: max PWM must be 0 to 100 percent."
+                );
+
+                return;
+            }
+
+            Serial_WriteLine(
+                "OK: actuator PWM limit updated."
+            );
+
+            return;
+        }
+
+        if (strcmp(arguments[1], "integral-limit") == 0)
+        {
+            if (!Actuator_SetIntegralLimit(value))
+            {
+                Serial_WriteLine(
+                    "ERROR: integral limit must be nonnegative."
+                );
+
+                return;
+            }
+
+            Serial_WriteLine(
+                "OK: actuator integral limit updated."
+            );
+
+            return;
+        }
+
+        if (strcmp(arguments[1], "period") == 0)
+        {
+            if (
+                value <= 0 ||
+                value > 1000 ||
+                !Actuator_SetControlPeriod(
+                    (uint32_t)value
+                )
+            )
+            {
+                Serial_WriteLine(
+                    "ERROR: period must be 1 to 1000 ms."
+                );
+
+                return;
+            }
+
+            Serial_WriteLine(
+                "OK: actuator control period updated."
+            );
+
+            return;
+        }
+
+        if (strcmp(arguments[1], "torque-constant") == 0)
+        {
+            if (!Actuator_SetWheelTorqueConstant(value))
+            {
+                Serial_WriteLine(
+                    "ERROR: torque constant must be positive."
+                );
+
+                return;
+            }
+
+            Serial_WriteLine(
+                "OK: actuator torque constant updated."
+            );
+
+            return;
+        }
+    }
+
+    if (
+        argument_count == 4 &&
+        (
+            strcmp(arguments[1], "both") == 0 ||
+            strcmp(arguments[1], "torque") == 0
+        )
+    )
+    {
+        if (
+            !Console_ParseInt32(
+                arguments[2],
+                -100000L,
+                100000L,
+                &value
+            ) ||
+            !Console_ParseInt32(
+                arguments[3],
+                -100000L,
+                100000L,
+                &second_value
+            )
+        )
+        {
+            Serial_WriteLine(
+                "ERROR: current references must be integers."
+            );
+
+            return;
+        }
+
+        if (strcmp(arguments[1], "both") == 0)
+        {
+            if (!Actuator_SetCurrentReferences(
+                    value,
+                    second_value
+                ))
+            {
+                Serial_WriteLine(
+                    "ERROR: current reference exceeds configured limit."
+                );
+
+                return;
+            }
+        }
+        else
+        {
+            if (!Actuator_SetWheelTorqueReferences(
+                    value,
+                    second_value
+                ))
+            {
+                Serial_WriteLine(
+                    "ERROR: torque reference exceeds configured current limit."
+                );
+
+                return;
+            }
+        }
+
+        MotorTest_Stop();
+        Actuator_Enable();
+
+        if (strcmp(arguments[1], "both") == 0)
+        {
+            Serial_WriteLine(
+                "OK: actuator current references updated."
+            );
+        }
+        else
+        {
+            Serial_WriteLine(
+                "OK: actuator torque references updated."
+            );
+        }
+
+        return;
+    }
+
+    Serial_WriteLine(
+        "ERROR: usage: actuator <left|right> <mA>, actuator both <left_mA> <right_mA>, actuator torque <left_mNm> <right_mNm>, actuator stop, actuator status, actuator config"
+    );
 }
 
 static void Console_HandleIMU(
@@ -507,6 +946,137 @@ static bool Console_ParseSpeed(
     return true;
 }
 
+static bool Console_ParseInt32(
+    const char *text,
+    int32_t minimum,
+    int32_t maximum,
+    int32_t *value
+)
+{
+    char *end;
+    long parsed;
+
+    if (
+        text == NULL ||
+        value == NULL ||
+        text[0] == '\0'
+    )
+    {
+        return false;
+    }
+
+    errno = 0;
+
+    parsed =
+        strtol(
+            text,
+            &end,
+            10
+        );
+
+    if (
+        end == text ||
+        *end != '\0' ||
+        errno == ERANGE ||
+        parsed < minimum ||
+        parsed > maximum
+    )
+    {
+        return false;
+    }
+
+    *value =
+        (int32_t)parsed;
+
+    return true;
+}
+
+static void Console_PrintActuatorConfig(void)
+{
+    ActuatorConfig config;
+
+    Actuator_GetConfig(
+        &config
+    );
+
+    Serial_WriteLine("Actuator config:");
+
+    Serial_Write("  Period [ms]: ");
+    Serial_WriteUInt32(config.control_period_ms);
+    Serial_WriteLine("");
+
+    Serial_Write("  Battery [mV]: ");
+    Serial_WriteInt32(config.battery_voltage_mv);
+    Serial_WriteLine("");
+
+    Serial_Write("  Kp [mV/A]: ");
+    Serial_WriteInt32(config.proportional_gain_mv_per_a);
+    Serial_WriteLine("");
+
+    Serial_Write("  Ki [mV/(A*s)]: ");
+    Serial_WriteInt32(config.integral_gain_mv_per_a_s);
+    Serial_WriteLine("");
+
+    Serial_Write("  Integral limit [mV]: ");
+    Serial_WriteInt32(config.integral_limit_mv);
+    Serial_WriteLine("");
+
+    Serial_Write("  Current limit [mA]: ");
+    Serial_WriteInt32(config.max_current_reference_ma);
+    Serial_WriteLine("");
+
+    Serial_Write("  PWM limit [%]: ");
+    Serial_WriteInt32(config.max_command_percent);
+    Serial_WriteLine("");
+
+    Serial_Write("  Torque constant [mN*m/A]: ");
+    Serial_WriteInt32(config.wheel_torque_constant_mnm_per_a);
+    Serial_WriteLine("");
+}
+
+static void Console_PrintActuatorStatus(void)
+{
+    ActuatorStatus status;
+
+    Actuator_GetStatus(
+        &status
+    );
+
+    Serial_Write("Actuator: enabled=");
+    Serial_Write(status.enabled ? "yes" : "no");
+
+    Serial_Write(" fault=");
+    Serial_Write(status.fault_active ? "ACTIVE" : "normal");
+
+    Serial_Write(" read_failed=");
+    Serial_Write(status.read_failed ? "yes" : "no");
+
+    Serial_Write(" left_ref=");
+    Serial_WriteInt32(status.left_current_reference_ma);
+
+    Serial_Write(" left_meas=");
+    Serial_WriteInt32(status.left_current_measured_ma);
+
+    Serial_Write(" left_err=");
+    Serial_WriteInt32(status.left_error_ma);
+
+    Serial_Write(" left_pwm=");
+    Serial_WriteInt32(status.left_command_permille);
+
+    Serial_Write(" right_ref=");
+    Serial_WriteInt32(status.right_current_reference_ma);
+
+    Serial_Write(" right_meas=");
+    Serial_WriteInt32(status.right_current_measured_ma);
+
+    Serial_Write(" right_err=");
+    Serial_WriteInt32(status.right_error_ma);
+
+    Serial_Write(" right_pwm=");
+    Serial_WriteInt32(status.right_command_permille);
+    Serial_WriteLine("");
+}
+
 static void Console_PrintHelp(void)
 {
     Serial_WriteLine("Commands:");
@@ -533,6 +1103,70 @@ static void Console_PrintHelp(void)
 
     Serial_WriteLine(
         "  current read"
+    );
+
+    Serial_WriteLine(
+        "  current scope <left|right> <samples>"
+    );
+
+    Serial_WriteLine(
+        "  actuator left <mA>"
+    );
+
+    Serial_WriteLine(
+        "  actuator right <mA>"
+    );
+
+    Serial_WriteLine(
+        "  actuator both <left_mA> <right_mA>"
+    );
+
+    Serial_WriteLine(
+        "  actuator torque <left_mNm> <right_mNm>"
+    );
+
+    Serial_WriteLine(
+        "  actuator stop"
+    );
+
+    Serial_WriteLine(
+        "  actuator status"
+    );
+
+    Serial_WriteLine(
+        "  actuator config"
+    );
+
+    Serial_WriteLine(
+        "  actuator kp <mV_per_A>"
+    );
+
+    Serial_WriteLine(
+        "  actuator ki <mV_per_A_s>"
+    );
+
+    Serial_WriteLine(
+        "  actuator battery <mV>"
+    );
+
+    Serial_WriteLine(
+        "  actuator max-current <mA>"
+    );
+
+    Serial_WriteLine(
+        "  actuator max-pwm <percent>"
+    );
+
+    Serial_WriteLine(
+        "  actuator integral-limit <mV>"
+    );
+
+    Serial_WriteLine(
+        "  actuator period <ms>"
+    );
+
+    Serial_WriteLine(
+        "  actuator torque-constant <mNm_per_A>"
     );
 
     Serial_WriteLine(

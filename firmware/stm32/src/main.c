@@ -1,5 +1,6 @@
 #include "stm32g4xx_hal.h"
 
+#include "control/actuator/actuator.h"
 #include "console/console.h"
 #include "current_sensor/current_sensor.h"
 #include "encoder/encoder.h"
@@ -24,6 +25,8 @@ int main(void)
     {
         Error_Handler();
     }
+
+    Actuator_Init();
 
     /*
      * Serial must be available before initializing the IMU,

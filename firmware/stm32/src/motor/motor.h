@@ -22,6 +22,16 @@ void Motor_SetLeft(int16_t command_percent);
 void Motor_SetRight(int16_t command_percent);
 
 /*
+ * Per-mille commands provide finer PWM resolution for current
+ * control:
+ *   -1000 = full duty, reverse direction
+ *       0 = stopped
+ *   +1000 = full duty, forward direction
+ */
+void Motor_SetLeftPermille(int16_t command_permille);
+void Motor_SetRightPermille(int16_t command_permille);
+
+/*
  * Stop functions set PWM duty to zero without changing driver
  * sleep state.
  */

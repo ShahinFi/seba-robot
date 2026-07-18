@@ -140,8 +140,8 @@ void Serial_Write(
     }
 
     /*
-     * Transmit remains blocking because console output is
-     * diagnostic and not part of the balancing control path.
+     * Transmit remains blocking because console output runs
+     * outside the actuator timer interrupt.
      *
      * Reception is interrupt-driven, so incoming characters
      * are still buffered while this function is transmitting.

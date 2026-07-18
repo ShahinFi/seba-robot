@@ -2,11 +2,14 @@
 
 #include "stm32g4xx_hal.h"
 
+#include <stdbool.h>
+
 #define MOTOR_PWM_FREQUENCY_HZ  20000U
 #define MOTOR_TIMER_CLOCK_HZ    16000000U
 #define MOTOR_PWM_PERIOD_COUNTS \
     (MOTOR_TIMER_CLOCK_HZ / MOTOR_PWM_FREQUENCY_HZ)
 #define MOTOR_PWM_ARR_VALUE     (MOTOR_PWM_PERIOD_COUNTS - 1U)
+#define MOTOR_COMMAND_PERCENT_SCALE  10
 
 /*
  * Left motor:
@@ -30,11 +33,27 @@
 #define RIGHT_SLEEP_PORT   GPIOB
 #define RIGHT_SLEEP_PIN    GPIO_PIN_5
 
+#define LEFT_MOTOR_SIGN   -1
+#define RIGHT_MOTOR_SIGN   1
+
+static int16_t left_command_permille;
+static int16_t right_command_permille;
+
 static void Motor_GPIO_Init(void);
 static void Motor_PWM_Init(void);
 
+static int16_t Motor_ApplySign(
+    int16_t command,
+    int16_t motor_sign
+);
+
 static int16_t Motor_ClampCommand(int16_t command_percent);
-static uint32_t Motor_DutyToCompare(uint16_t duty_percent);
+static int16_t Motor_ClampPermille(int16_t command_permille);
+static uint32_t Motor_PermilleToCompare(uint16_t duty_permille);
+static bool Motor_DirectionChanges(
+    int16_t previous_command,
+    int16_t next_command
+);
 
 void Motor_Init(void)
 {
@@ -47,6 +66,9 @@ void Motor_Init(void)
 
     Motor_GPIO_Init();
     Motor_PWM_Init();
+
+    left_command_permille = 0;
+    right_command_permille = 0;
 
     Motor_StopAll();
     Motor_Disable();
@@ -104,51 +126,86 @@ void Motor_Disable(void)
 
 void Motor_SetLeft(int16_t command_percent)
 {
-    uint16_t duty_percent;
-
-    command_percent = Motor_ClampCommand(command_percent);
-
-    /*
-     * Remove PWM before changing direction.
-     */
-    Motor_StopLeft();
-
-    if (command_percent < 0)
-    {
-        HAL_GPIO_WritePin(
-            LEFT_DIR_PORT,
-            LEFT_DIR_PIN,
-            GPIO_PIN_SET
-        );
-
-        duty_percent = (uint16_t)(-command_percent);
-    }
-    else
-    {
-        HAL_GPIO_WritePin(
-            LEFT_DIR_PORT,
-            LEFT_DIR_PIN,
-            GPIO_PIN_RESET
-        );
-
-        duty_percent = (uint16_t)command_percent;
-    }
-
-    TIM3->CCR2 = Motor_DutyToCompare(duty_percent);
+    Motor_SetLeftPermille(
+        (int16_t)(
+            Motor_ClampCommand(command_percent) *
+            MOTOR_COMMAND_PERCENT_SCALE
+        )
+    );
 }
 
 void Motor_SetRight(int16_t command_percent)
 {
-    uint16_t duty_percent;
+    Motor_SetRightPermille(
+        (int16_t)(
+            Motor_ClampCommand(command_percent) *
+            MOTOR_COMMAND_PERCENT_SCALE
+        )
+    );
+}
 
-    command_percent = Motor_ClampCommand(command_percent);
+void Motor_SetLeftPermille(int16_t command_permille)
+{
+    uint16_t duty_permille;
 
-    /*
-     * Remove PWM before changing direction.
-     */
-    Motor_StopRight();
+    command_permille =
+        Motor_ApplySign(
+            Motor_ClampPermille(command_permille),
+            LEFT_MOTOR_SIGN
+        );
 
-    if (command_percent < 0)
+    if (Motor_DirectionChanges(
+            left_command_permille,
+            command_permille
+        ))
+    {
+        Motor_StopLeft();
+    }
+
+    if (command_permille < 0)
+    {
+        HAL_GPIO_WritePin(
+            LEFT_DIR_PORT,
+            LEFT_DIR_PIN,
+            GPIO_PIN_SET
+        );
+
+        duty_permille = (uint16_t)(-command_permille);
+    }
+    else
+    {
+        HAL_GPIO_WritePin(
+            LEFT_DIR_PORT,
+            LEFT_DIR_PIN,
+            GPIO_PIN_RESET
+        );
+
+        duty_permille = (uint16_t)command_permille;
+    }
+
+    TIM3->CCR2 = Motor_PermilleToCompare(duty_permille);
+    left_command_permille = command_permille;
+}
+
+void Motor_SetRightPermille(int16_t command_permille)
+{
+    uint16_t duty_permille;
+
+    command_permille =
+        Motor_ApplySign(
+            Motor_ClampPermille(command_permille),
+            RIGHT_MOTOR_SIGN
+        );
+
+    if (Motor_DirectionChanges(
+            right_command_permille,
+            command_permille
+        ))
+    {
+        Motor_StopRight();
+    }
+
+    if (command_permille < 0)
     {
         HAL_GPIO_WritePin(
             RIGHT_DIR_PORT,
@@ -156,7 +213,7 @@ void Motor_SetRight(int16_t command_percent)
             GPIO_PIN_SET
         );
 
-        duty_percent = (uint16_t)(-command_percent);
+        duty_permille = (uint16_t)(-command_permille);
     }
     else
     {
@@ -166,26 +223,41 @@ void Motor_SetRight(int16_t command_percent)
             GPIO_PIN_RESET
         );
 
-        duty_percent = (uint16_t)command_percent;
+        duty_permille = (uint16_t)command_permille;
     }
 
-    TIM4->CCR1 = Motor_DutyToCompare(duty_percent);
+    TIM4->CCR1 = Motor_PermilleToCompare(duty_permille);
+    right_command_permille = command_permille;
 }
 
 void Motor_StopLeft(void)
 {
     TIM3->CCR2 = 0U;
+    left_command_permille = 0;
 }
 
 void Motor_StopRight(void)
 {
     TIM4->CCR1 = 0U;
+    right_command_permille = 0;
 }
 
 void Motor_StopAll(void)
 {
     Motor_StopLeft();
     Motor_StopRight();
+}
+
+static int16_t Motor_ApplySign(
+    int16_t command,
+    int16_t motor_sign
+)
+{
+    return
+        (int16_t)(
+            command *
+            motor_sign
+        );
 }
 
 static int16_t Motor_ClampCommand(int16_t command_percent)
@@ -203,18 +275,51 @@ static int16_t Motor_ClampCommand(int16_t command_percent)
     return command_percent;
 }
 
-static uint32_t Motor_DutyToCompare(uint16_t duty_percent)
+static int16_t Motor_ClampPermille(int16_t command_permille)
 {
-    if (duty_percent > 100U)
+    if (command_permille > 1000)
     {
-        duty_percent = 100U;
+        return 1000;
     }
 
-    /*
-     * A 100 percent command intentionally sets CCR above ARR,
-     * producing continuous high output in PWM mode.
-     */
-    return (MOTOR_PWM_PERIOD_COUNTS * duty_percent) / 100U;
+    if (command_permille < -1000)
+    {
+        return -1000;
+    }
+
+    return command_permille;
+}
+
+static uint32_t Motor_PermilleToCompare(uint16_t duty_permille)
+{
+    if (duty_permille > 1000U)
+    {
+        duty_permille = 1000U;
+    }
+
+    return
+        (
+            MOTOR_PWM_PERIOD_COUNTS *
+            duty_permille +
+            500U
+        ) /
+        1000U;
+}
+
+static bool Motor_DirectionChanges(
+    int16_t previous_command,
+    int16_t next_command
+)
+{
+    return
+        (
+            previous_command < 0 &&
+            next_command > 0
+        ) ||
+        (
+            previous_command > 0 &&
+            next_command < 0
+        );
 }
 
 static void Motor_GPIO_Init(void)
