@@ -1,6 +1,10 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
+/*
+ * Initializes command-line buffering and framed command
+ * protocol state.
+ */
 void Console_Init(void);
 
 /*
