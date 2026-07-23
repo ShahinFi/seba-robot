@@ -1,0 +1,107 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SEBA Tuner</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <h1>SEBA-ROBOT Live Tuner</h1>
+    <div id="connection" class="status">connecting</div>
+  </header>
+
+  <main>
+    <div>
+      <section>
+        <h2>Run Control</h2>
+        <div class="toolbar">
+          <button id="balance_start" class="primary">Start Balance</button>
+          <button id="balance_stop">Stop Balance</button>
+          <button id="actuator_stop" class="danger">Stop Actuator</button>
+          <button id="system_reset" class="danger">Reset STM32</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Motion Command</h2>
+        <div class="grid">
+          <label>Forward velocity [m/s]
+            <input id="v_cmd" type="number" min="-2" max="2" step="0.01" value="0">
+          </label>
+          <label>Yaw rate [rad/s]
+            <input id="yaw_cmd" type="number" min="-6" max="6" step="0.01" value="0">
+          </label>
+          <button id="apply_motion" class="full">Apply Motion Command</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Balance Loop</h2>
+        <div class="grid">
+          <label>Gain scale [%]
+            <input id="gain_scale" type="number" min="0" max="10000" step="1" value="200">
+          </label>
+          <label>Max torque [mNm]
+            <input id="max_torque" type="number" min="0" max="10000" step="10" value="5000">
+          </label>
+          <button data-command-prefix="balance gain-scale" data-input-id="gain_scale">Apply Gain Scale</button>
+          <button data-command-prefix="balance max-torque" data-input-id="max_torque">Apply Max Torque</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Actuator Loop</h2>
+        <div class="grid">
+          <label>Kp [mV/A]
+            <input id="act_kp" type="number" min="0" max="100000" step="100" value="4000">
+          </label>
+          <label>Ki [mV/(A*s)]
+            <input id="act_ki" type="number" min="0" max="100000" step="100" value="0">
+          </label>
+          <label>Max current [mA]
+            <input id="act_max_current" type="number" min="0" max="10000" step="50" value="5000">
+          </label>
+          <label>Max PWM [%]
+            <input id="act_max_pwm" type="number" min="0" max="100" step="1" value="100">
+          </label>
+          <label>Integral limit [mV]
+            <input id="act_integral" type="number" min="0" max="20000" step="100" value="3000">
+          </label>
+          <label>Torque constant [mNm/A]
+            <input id="act_ktw" type="number" min="1" max="10000" step="10" value="1000">
+          </label>
+          <button data-command-prefix="actuator kp" data-input-id="act_kp">Apply Kp</button>
+          <button data-command-prefix="actuator ki" data-input-id="act_ki">Apply Ki</button>
+          <button data-command-prefix="actuator max-current" data-input-id="act_max_current">Apply Max Current</button>
+          <button data-command-prefix="actuator max-pwm" data-input-id="act_max_pwm">Apply Max PWM</button>
+          <button data-command-prefix="actuator integral-limit" data-input-id="act_integral">Apply Integral</button>
+          <button data-command-prefix="actuator torque-constant" data-input-id="act_ktw">Apply Torque Constant</button>
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <section>
+        <h2>Telemetry</h2>
+        <div class="readout" id="readout"></div>
+      </section>
+
+      <section>
+        <h2>RSLQR Gain Matrix</h2>
+        <div class="matrix" id="gain_matrix"></div>
+        <div class="section-spacer"></div>
+        <button id="apply_gains">Apply All Gains</button>
+      </section>
+
+      <section>
+        <h2>Command Log</h2>
+        <div id="log" class="log"></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
