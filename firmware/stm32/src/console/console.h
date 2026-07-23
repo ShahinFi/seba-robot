@@ -9,6 +9,4 @@ void Console_Init(void);
  */
 void Console_Process(void);
 
-void Console_PrintTelemetry(void);
-
 #endif

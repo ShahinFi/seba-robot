@@ -1,5 +1,6 @@
 #include "stm32g4xx_hal.h"
 
+#include "communication/telemetry_stream.h"
 #include "control/actuator/actuator.h"
 #include "control/motion_control/motion_control.h"
 #include "control/state_estimation/state_estimation.h"
@@ -86,7 +87,7 @@ static void StreamTelemetry(void)
     last_stream_ms =
         now_ms;
 
-    Console_PrintTelemetry();
+    TelemetryStream_WriteSnapshot();
 }
 
 static void SystemClock_Init(void)
