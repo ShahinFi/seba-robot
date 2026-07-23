@@ -1,2 +1,5 @@
 # Local style notes
 COMMENT_STYLE.md
+control/simulink/slprj
+__pycache__/
+*.py[cod]
