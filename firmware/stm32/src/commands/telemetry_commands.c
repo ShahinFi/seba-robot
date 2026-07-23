@@ -4,7 +4,7 @@
 
 #include <string.h>
 
-void TelemetryCommands_Handle(
+CommandResult TelemetryCommands_Handle(
     int argument_count,
     char *arguments[]
 )
@@ -18,8 +18,10 @@ void TelemetryCommands_Handle(
             "ERROR: usage: telemetry read"
         );
 
-        return;
+        return COMMAND_RESULT_ERROR;
     }
 
     TelemetryStream_WriteSnapshot();
+
+    return COMMAND_RESULT_OK;
 }

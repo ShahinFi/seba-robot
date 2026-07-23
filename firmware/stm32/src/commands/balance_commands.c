@@ -9,7 +9,7 @@
 
 static void BalanceCommands_PrintStatus(void);
 
-void BalanceCommands_Handle(
+CommandResult BalanceCommands_Handle(
     int argument_count,
     char *arguments[]
 )
@@ -39,7 +39,7 @@ void BalanceCommands_Handle(
                 "ERROR: balance value must be 0 to 10000."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
         if (strcmp(arguments[1], "max-torque") == 0)
@@ -52,14 +52,14 @@ void BalanceCommands_Handle(
                     "ERROR: balance max torque update failed."
                 );
 
-                return;
+                return COMMAND_RESULT_ERROR;
             }
 
             Serial_WriteLine(
                 "OK: balance torque limit updated."
             );
 
-            return;
+            return COMMAND_RESULT_OK;
         }
 
         if (!MotionControl_SetGainScale(
@@ -71,14 +71,14 @@ void BalanceCommands_Handle(
                 "ERROR: balance gain scale update failed."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
         Serial_WriteLine(
             "OK: balance gain scale updated."
         );
 
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     if (
@@ -105,7 +105,7 @@ void BalanceCommands_Handle(
                 "ERROR: balance command values are out of range."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
         (void)MotionControl_SetCommand(
@@ -117,7 +117,7 @@ void BalanceCommands_Handle(
             "OK: balance command updated."
         );
 
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     if (
@@ -139,7 +139,7 @@ void BalanceCommands_Handle(
                 "ERROR: balance gain side must be 'left' or 'right'."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
         if (
@@ -161,7 +161,7 @@ void BalanceCommands_Handle(
                 "ERROR: balance gain requires column 0 to 5 and numeric gain."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
         if (!MotionControl_SetGain(
@@ -174,14 +174,14 @@ void BalanceCommands_Handle(
                 "ERROR: balance gain update failed."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
         Serial_WriteLine(
             "OK: balance gain updated."
         );
 
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     if (argument_count != 2)
@@ -190,7 +190,7 @@ void BalanceCommands_Handle(
             "ERROR: usage: balance <start|stop|status> OR balance max-torque <mNm> OR balance gain-scale <percent> OR balance command <v> <yaw> OR balance gain <left|right> <0...5> <value>"
         );
 
-        return;
+        return COMMAND_RESULT_ERROR;
     }
 
     if (strcmp(arguments[1], "start") == 0)
@@ -202,7 +202,7 @@ void BalanceCommands_Handle(
             "OK: balance control started."
         );
 
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     if (strcmp(arguments[1], "stop") == 0)
@@ -213,18 +213,20 @@ void BalanceCommands_Handle(
             "OK: balance control stopped."
         );
 
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     if (strcmp(arguments[1], "status") == 0)
     {
         BalanceCommands_PrintStatus();
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     Serial_WriteLine(
         "ERROR: usage: balance <start|stop|status> OR balance max-torque <mNm> OR balance gain-scale <percent> OR balance command <v> <yaw> OR balance gain <left|right> <0...5> <value>"
     );
+
+    return COMMAND_RESULT_ERROR;
 }
 
 static void BalanceCommands_PrintStatus(void)

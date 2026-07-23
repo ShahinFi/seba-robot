@@ -656,15 +656,21 @@ class SerialLink:
         except ValueError:
             return
 
-        if parts[2] == "OK":
-            with self._condition:
-                if (
-                    self._inflight_command is not None and
-                    self._inflight_command["id"] == command_id
-                ):
-                    self._inflight_command = None
+        if parts[2] not in ("OK", "ERROR"):
+            return
+
+        with self._condition:
+            if (
+                self._inflight_command is not None and
+                self._inflight_command["id"] == command_id
+            ):
+                self._inflight_command = None
+                self._last_ack = line
+
+                if parts[2] == "OK":
                     self._error = None
-                    self._last_ack = line
+                else:
+                    self._error = line
 
     def _close(self):
         if self._serial is not None:

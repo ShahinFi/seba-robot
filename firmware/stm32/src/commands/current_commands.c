@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <string.h>
 
-void CurrentCommands_Handle(
+CommandResult CurrentCommands_Handle(
     int argument_count,
     char *arguments[]
 )
@@ -27,7 +27,7 @@ void CurrentCommands_Handle(
                 "ERROR: stop actuator control before using current read."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
         if (!CurrentSensorTest_PrintReadings())
@@ -36,10 +36,10 @@ void CurrentCommands_Handle(
                 "ERROR: current sensor read failed."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     if (
@@ -61,7 +61,7 @@ void CurrentCommands_Handle(
                 "ERROR: current scope channel must be 'left' or 'right'."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
         if (!CommandParser_ParseInt32(
@@ -75,7 +75,7 @@ void CurrentCommands_Handle(
                 "ERROR: sample count must be 1 to 10000."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
         if (Actuator_IsEnabled())
@@ -84,7 +84,7 @@ void CurrentCommands_Handle(
                 "ERROR: stop actuator control before using current scope."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
         if (!CurrentSensorTest_PrintCapture(
@@ -96,13 +96,15 @@ void CurrentCommands_Handle(
                 "ERROR: current sensor capture failed."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     Serial_WriteLine(
         "ERROR: usage: current read OR current scope <left|right> <samples>"
     );
+
+    return COMMAND_RESULT_ERROR;
 }

@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-void EncoderCommands_Handle(
+CommandResult EncoderCommands_Handle(
     int argument_count,
     char *arguments[]
 )
@@ -16,14 +16,14 @@ void EncoderCommands_Handle(
             "ERROR: usage: encoder <read|reset>"
         );
 
-        return;
+        return COMMAND_RESULT_ERROR;
     }
 
     if (strcmp(arguments[1], "read") == 0)
     {
         EncoderTest_PrintPositions();
 
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     if (strcmp(arguments[1], "reset") == 0)
@@ -31,10 +31,12 @@ void EncoderCommands_Handle(
         EncoderTest_ResetPositions();
         StateEstimation_Reset();
 
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     Serial_WriteLine(
         "ERROR: usage: encoder <read|reset>"
     );
+
+    return COMMAND_RESULT_ERROR;
 }

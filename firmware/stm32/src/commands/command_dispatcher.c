@@ -17,7 +17,7 @@
 
 #define COMMAND_DISPATCHER_MAX_ARGUMENTS  5
 
-void CommandDispatcher_ExecuteLine(
+CommandResult CommandDispatcher_ExecuteLine(
     char *line
 )
 {
@@ -32,7 +32,7 @@ void CommandDispatcher_ExecuteLine(
 
     if (argument_count == 0)
     {
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     if (strcmp(arguments[0], "help") == 0)
@@ -43,65 +43,55 @@ void CommandDispatcher_ExecuteLine(
                 "ERROR: usage: help"
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
-        HelpCommands_Print();
-        return;
+        return HelpCommands_Print();
     }
 
     if (strcmp(arguments[0], "motor") == 0)
     {
-        MotorCommands_Handle(argument_count, arguments);
-        return;
+        return MotorCommands_Handle(argument_count, arguments);
     }
 
     if (strcmp(arguments[0], "encoder") == 0)
     {
-        EncoderCommands_Handle(argument_count, arguments);
-        return;
+        return EncoderCommands_Handle(argument_count, arguments);
     }
 
     if (strcmp(arguments[0], "current") == 0)
     {
-        CurrentCommands_Handle(argument_count, arguments);
-        return;
+        return CurrentCommands_Handle(argument_count, arguments);
     }
 
     if (strcmp(arguments[0], "actuator") == 0)
     {
-        ActuatorCommands_Handle(argument_count, arguments);
-        return;
+        return ActuatorCommands_Handle(argument_count, arguments);
     }
 
     if (strcmp(arguments[0], "state") == 0)
     {
-        StateCommands_Handle(argument_count, arguments);
-        return;
+        return StateCommands_Handle(argument_count, arguments);
     }
 
     if (strcmp(arguments[0], "balance") == 0)
     {
-        BalanceCommands_Handle(argument_count, arguments);
-        return;
+        return BalanceCommands_Handle(argument_count, arguments);
     }
 
     if (strcmp(arguments[0], "telemetry") == 0)
     {
-        TelemetryCommands_Handle(argument_count, arguments);
-        return;
+        return TelemetryCommands_Handle(argument_count, arguments);
     }
 
     if (strcmp(arguments[0], "system") == 0)
     {
-        SystemCommands_Handle(argument_count, arguments);
-        return;
+        return SystemCommands_Handle(argument_count, arguments);
     }
 
     if (strcmp(arguments[0], "imu") == 0)
     {
-        IMUCommands_Handle(argument_count, arguments);
-        return;
+        return IMUCommands_Handle(argument_count, arguments);
     }
 
     Serial_WriteLine(
@@ -111,4 +101,6 @@ void CommandDispatcher_ExecuteLine(
     Serial_WriteLine(
         "Type 'help' for available commands."
     );
+
+    return COMMAND_RESULT_ERROR;
 }

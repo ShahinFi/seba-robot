@@ -11,7 +11,7 @@
 static void ActuatorCommands_PrintConfig(void);
 static void ActuatorCommands_PrintStatus(void);
 
-void ActuatorCommands_Handle(
+CommandResult ActuatorCommands_Handle(
     int argument_count,
     char *arguments[]
 )
@@ -30,19 +30,19 @@ void ActuatorCommands_Handle(
                 "OK: actuator current control stopped."
             );
 
-            return;
+            return COMMAND_RESULT_OK;
         }
 
         if (strcmp(arguments[1], "status") == 0)
         {
             ActuatorCommands_PrintStatus();
-            return;
+            return COMMAND_RESULT_OK;
         }
 
         if (strcmp(arguments[1], "config") == 0)
         {
             ActuatorCommands_PrintConfig();
-            return;
+            return COMMAND_RESULT_OK;
         }
     }
 
@@ -59,7 +59,7 @@ void ActuatorCommands_Handle(
                 "ERROR: actuator value must be an integer."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
         Actuator_GetStatus(
@@ -77,7 +77,7 @@ void ActuatorCommands_Handle(
                     "ERROR: current reference exceeds configured limit."
                 );
 
-                return;
+                return COMMAND_RESULT_ERROR;
             }
 
             MotorTest_Stop();
@@ -88,7 +88,7 @@ void ActuatorCommands_Handle(
                 "OK: left current reference updated."
             );
 
-            return;
+            return COMMAND_RESULT_OK;
         }
 
         if (strcmp(arguments[1], "right") == 0)
@@ -102,7 +102,7 @@ void ActuatorCommands_Handle(
                     "ERROR: current reference exceeds configured limit."
                 );
 
-                return;
+                return COMMAND_RESULT_ERROR;
             }
 
             MotorTest_Stop();
@@ -113,7 +113,7 @@ void ActuatorCommands_Handle(
                 "OK: right current reference updated."
             );
 
-            return;
+            return COMMAND_RESULT_OK;
         }
 
         if (strcmp(arguments[1], "kp") == 0)
@@ -124,11 +124,11 @@ void ActuatorCommands_Handle(
                     "ERROR: kp must be nonnegative."
                 );
 
-                return;
+                return COMMAND_RESULT_ERROR;
             }
 
             Serial_WriteLine("OK: actuator kp updated.");
-            return;
+            return COMMAND_RESULT_OK;
         }
 
         if (strcmp(arguments[1], "ki") == 0)
@@ -139,11 +139,11 @@ void ActuatorCommands_Handle(
                     "ERROR: ki must be nonnegative."
                 );
 
-                return;
+                return COMMAND_RESULT_ERROR;
             }
 
             Serial_WriteLine("OK: actuator ki updated.");
-            return;
+            return COMMAND_RESULT_OK;
         }
 
         if (strcmp(arguments[1], "battery") == 0)
@@ -154,14 +154,14 @@ void ActuatorCommands_Handle(
                     "ERROR: battery voltage must be positive."
                 );
 
-                return;
+                return COMMAND_RESULT_ERROR;
             }
 
             Serial_WriteLine(
                 "OK: actuator battery voltage updated."
             );
 
-            return;
+            return COMMAND_RESULT_OK;
         }
 
         if (strcmp(arguments[1], "max-current") == 0)
@@ -172,14 +172,14 @@ void ActuatorCommands_Handle(
                     "ERROR: max current must be nonnegative."
                 );
 
-                return;
+                return COMMAND_RESULT_ERROR;
             }
 
             Serial_WriteLine(
                 "OK: actuator current limit updated."
             );
 
-            return;
+            return COMMAND_RESULT_OK;
         }
 
         if (strcmp(arguments[1], "max-pwm") == 0)
@@ -196,14 +196,14 @@ void ActuatorCommands_Handle(
                     "ERROR: max PWM must be 0 to 100 percent."
                 );
 
-                return;
+                return COMMAND_RESULT_ERROR;
             }
 
             Serial_WriteLine(
                 "OK: actuator PWM limit updated."
             );
 
-            return;
+            return COMMAND_RESULT_OK;
         }
 
         if (strcmp(arguments[1], "integral-limit") == 0)
@@ -214,14 +214,14 @@ void ActuatorCommands_Handle(
                     "ERROR: integral limit must be nonnegative."
                 );
 
-                return;
+                return COMMAND_RESULT_ERROR;
             }
 
             Serial_WriteLine(
                 "OK: actuator integral limit updated."
             );
 
-            return;
+            return COMMAND_RESULT_OK;
         }
 
         if (strcmp(arguments[1], "period") == 0)
@@ -238,14 +238,14 @@ void ActuatorCommands_Handle(
                     "ERROR: period must be 1 to 1000 ms."
                 );
 
-                return;
+                return COMMAND_RESULT_ERROR;
             }
 
             Serial_WriteLine(
                 "OK: actuator control period updated."
             );
 
-            return;
+            return COMMAND_RESULT_OK;
         }
 
         if (strcmp(arguments[1], "torque-constant") == 0)
@@ -256,14 +256,14 @@ void ActuatorCommands_Handle(
                     "ERROR: torque constant must be positive."
                 );
 
-                return;
+                return COMMAND_RESULT_ERROR;
             }
 
             Serial_WriteLine(
                 "OK: actuator torque constant updated."
             );
 
-            return;
+            return COMMAND_RESULT_OK;
         }
     }
 
@@ -294,7 +294,7 @@ void ActuatorCommands_Handle(
                 "ERROR: current references must be integers."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
         if (strcmp(arguments[1], "both") == 0)
@@ -308,7 +308,7 @@ void ActuatorCommands_Handle(
                     "ERROR: current reference exceeds configured limit."
                 );
 
-                return;
+                return COMMAND_RESULT_ERROR;
             }
         }
         else
@@ -322,7 +322,7 @@ void ActuatorCommands_Handle(
                     "ERROR: torque reference exceeds configured current limit."
                 );
 
-                return;
+                return COMMAND_RESULT_ERROR;
             }
         }
 
@@ -343,12 +343,14 @@ void ActuatorCommands_Handle(
             );
         }
 
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     Serial_WriteLine(
         "ERROR: usage: actuator <left|right> <mA>, actuator both <left_mA> <right_mA>, actuator torque <left_mNm> <right_mNm>, actuator stop, actuator status, actuator config"
     );
+
+    return COMMAND_RESULT_ERROR;
 }
 
 static void ActuatorCommands_PrintConfig(void)

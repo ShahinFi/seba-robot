@@ -6,7 +6,7 @@
 
 static void StateCommands_Print(void);
 
-void StateCommands_Handle(
+CommandResult StateCommands_Handle(
     int argument_count,
     char *arguments[]
 )
@@ -20,10 +20,12 @@ void StateCommands_Handle(
             "ERROR: usage: state read"
         );
 
-        return;
+        return COMMAND_RESULT_ERROR;
     }
 
     StateCommands_Print();
+
+    return COMMAND_RESULT_OK;
 }
 
 static void StateCommands_Print(void)

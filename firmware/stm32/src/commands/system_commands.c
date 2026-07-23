@@ -3,9 +3,12 @@
 
 #include "stm32g4xx_hal.h"
 
+#include <stdbool.h>
 #include <string.h>
 
-void SystemCommands_Handle(
+static bool reset_requested;
+
+CommandResult SystemCommands_Handle(
     int argument_count,
     char *arguments[]
 )
@@ -19,12 +22,25 @@ void SystemCommands_Handle(
             "ERROR: usage: system reset"
         );
 
-        return;
+        return COMMAND_RESULT_ERROR;
     }
 
     Serial_WriteLine(
         "OK: resetting STM32."
     );
+
+    reset_requested =
+        true;
+
+    return COMMAND_RESULT_OK;
+}
+
+void SystemCommands_ProcessResetRequest(void)
+{
+    if (!reset_requested)
+    {
+        return;
+    }
 
     HAL_Delay(20U);
     NVIC_SystemReset();

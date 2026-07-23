@@ -1,7 +1,7 @@
 #include "help_commands.h"
 #include "serial/serial.h"
 
-void HelpCommands_Print(void)
+CommandResult HelpCommands_Print(void)
 {
     Serial_WriteLine("Commands:");
 
@@ -154,4 +154,6 @@ void HelpCommands_Print(void)
     Serial_WriteLine(
         "Zero = stop that motor"
     );
+
+    return COMMAND_RESULT_OK;
 }

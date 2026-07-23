@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <string.h>
 
-void MotorCommands_Handle(
+CommandResult MotorCommands_Handle(
     int argument_count,
     char *arguments[]
 )
@@ -26,7 +26,7 @@ void MotorCommands_Handle(
             "OK: all motors stopped and disabled."
         );
 
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     if (argument_count != 3)
@@ -35,7 +35,7 @@ void MotorCommands_Handle(
             "ERROR: usage: motor <left|right> <-100...100> OR motor stop"
         );
 
-        return;
+        return COMMAND_RESULT_ERROR;
     }
 
     if (!CommandParser_ParseSpeed(
@@ -47,7 +47,7 @@ void MotorCommands_Handle(
             "ERROR: speed must be an integer from -100 to 100."
         );
 
-        return;
+        return COMMAND_RESULT_ERROR;
     }
 
     if (strcmp(arguments[1], "left") == 0)
@@ -60,7 +60,7 @@ void MotorCommands_Handle(
                 "ERROR: invalid left motor command."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
         Serial_Write(
@@ -71,7 +71,7 @@ void MotorCommands_Handle(
 
         Serial_WriteLine("%");
 
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     if (strcmp(arguments[1], "right") == 0)
@@ -84,7 +84,7 @@ void MotorCommands_Handle(
                 "ERROR: invalid right motor command."
             );
 
-            return;
+            return COMMAND_RESULT_ERROR;
         }
 
         Serial_Write(
@@ -95,10 +95,12 @@ void MotorCommands_Handle(
 
         Serial_WriteLine("%");
 
-        return;
+        return COMMAND_RESULT_OK;
     }
 
     Serial_WriteLine(
         "ERROR: motor must be 'left', 'right', or 'stop'."
     );
+
+    return COMMAND_RESULT_ERROR;
 }

@@ -1,5 +1,6 @@
 #include "stm32g4xx_hal.h"
 
+#include "commands/system_commands.h"
 #include "communication/telemetry_stream.h"
 #include "control/actuator/actuator.h"
 #include "control/motion_control/motion_control.h"
@@ -59,6 +60,7 @@ int main(void)
     while (1)
     {
         Console_Process();
+        SystemCommands_ProcessResetRequest();
 
         if (imu_initialized)
         {
@@ -66,6 +68,7 @@ int main(void)
         }
 
         Console_Process();
+        SystemCommands_ProcessResetRequest();
         StreamTelemetry();
     }
 }

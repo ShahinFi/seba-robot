@@ -4,7 +4,7 @@
 
 #include <string.h>
 
-void IMUCommands_Handle(
+CommandResult IMUCommands_Handle(
     int argument_count,
     char *arguments[]
 )
@@ -18,7 +18,7 @@ void IMUCommands_Handle(
             "ERROR: usage: imu read"
         );
 
-        return;
+        return COMMAND_RESULT_ERROR;
     }
 
     if (!IMUTest_PrintLatest())
@@ -27,6 +27,8 @@ void IMUCommands_Handle(
             "ERROR: IMU is not initialized."
         );
 
-        return;
+        return COMMAND_RESULT_ERROR;
     }
+
+    return COMMAND_RESULT_OK;
 }

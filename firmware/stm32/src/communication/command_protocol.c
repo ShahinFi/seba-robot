@@ -1,6 +1,7 @@
 #include "command_protocol.h"
 
 #include "commands/command_dispatcher.h"
+#include "commands/command_result.h"
 #include "serial/serial.h"
 
 #include <stdint.h>
@@ -9,7 +10,13 @@
 
 #define COMMAND_PROTOCOL_RECENT_IDS  16U
 
-static uint32_t recent_command_ids[COMMAND_PROTOCOL_RECENT_IDS];
+typedef struct
+{
+    uint32_t command_id;
+    CommandResult result;
+} CommandProtocolRecord;
+
+static CommandProtocolRecord recent_commands[COMMAND_PROTOCOL_RECENT_IDS];
 static uint32_t recent_command_id_index;
 
 static bool CommandProtocol_ParseId(
@@ -17,20 +24,27 @@ static bool CommandProtocol_ParseId(
     uint32_t *command_id
 );
 
-static bool CommandProtocol_IdWasSeen(
-    uint32_t command_id
+static bool CommandProtocol_FindResult(
+    uint32_t command_id,
+    CommandResult *result
 );
 
 static void CommandProtocol_RememberId(
-    uint32_t command_id
+    uint32_t command_id,
+    CommandResult result
+);
+
+static void CommandProtocol_WriteAck(
+    uint32_t command_id,
+    CommandResult result
 );
 
 void CommandProtocol_Init(void)
 {
     memset(
-        recent_command_ids,
+        recent_commands,
         0,
-        sizeof(recent_command_ids)
+        sizeof(recent_commands)
     );
 
     recent_command_id_index = 0U;
@@ -43,6 +57,7 @@ bool CommandProtocol_TryExecuteLine(
     char *id_text;
     char *command;
     uint32_t command_id;
+    CommandResult result;
 
     if (strncmp(line, "CMD ", 4U) != 0)
     {
@@ -82,17 +97,31 @@ bool CommandProtocol_TryExecuteLine(
         return true;
     }
 
-    Serial_Write("ACK ");
-    Serial_WriteUInt32(command_id);
-    Serial_WriteLine(" OK");
-
-    if (CommandProtocol_IdWasSeen(command_id))
+    if (CommandProtocol_FindResult(
+            command_id,
+            &result
+        ))
     {
+        CommandProtocol_WriteAck(
+            command_id,
+            result
+        );
+
         return true;
     }
 
-    CommandProtocol_RememberId(command_id);
-    CommandDispatcher_ExecuteLine(command);
+    result =
+        CommandDispatcher_ExecuteLine(command);
+
+    CommandProtocol_RememberId(
+        command_id,
+        result
+    );
+
+    CommandProtocol_WriteAck(
+        command_id,
+        result
+    );
 
     return true;
 }
@@ -137,8 +166,9 @@ static bool CommandProtocol_ParseId(
     return true;
 }
 
-static bool CommandProtocol_IdWasSeen(
-    uint32_t command_id
+static bool CommandProtocol_FindResult(
+    uint32_t command_id,
+    CommandResult *result
 )
 {
     for (
@@ -147,8 +177,14 @@ static bool CommandProtocol_IdWasSeen(
         index++
     )
     {
-        if (recent_command_ids[index] == command_id)
+        if (recent_commands[index].command_id == command_id)
         {
+            if (result != NULL)
+            {
+                *result =
+                    recent_commands[index].result;
+            }
+
             return true;
         }
     }
@@ -157,16 +193,38 @@ static bool CommandProtocol_IdWasSeen(
 }
 
 static void CommandProtocol_RememberId(
-    uint32_t command_id
+    uint32_t command_id,
+    CommandResult result
 )
 {
-    recent_command_ids[recent_command_id_index] =
+    recent_commands[recent_command_id_index].command_id =
         command_id;
+
+    recent_commands[recent_command_id_index].result =
+        result;
 
     recent_command_id_index++;
 
     if (recent_command_id_index >= COMMAND_PROTOCOL_RECENT_IDS)
     {
         recent_command_id_index = 0U;
+    }
+}
+
+static void CommandProtocol_WriteAck(
+    uint32_t command_id,
+    CommandResult result
+)
+{
+    Serial_Write("ACK ");
+    Serial_WriteUInt32(command_id);
+
+    if (result == COMMAND_RESULT_OK)
+    {
+        Serial_WriteLine(" OK");
+    }
+    else
+    {
+        Serial_WriteLine(" ERROR");
     }
 }
