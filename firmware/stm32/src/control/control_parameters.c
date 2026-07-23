@@ -20,7 +20,7 @@ static const ControlParameters control_parameters =
     .derivative_filter_cutoff_hz = 15.0F,
     .max_wheel_torque_mnm = 5000.0F,
     .fall_angle_rad = 1.047197551F,
-    .motion_gain_scale = 2.0F,
+    .motion_gain_scale = 2.5F,
     .rslqr_gain_nm_s =
     {
         {
