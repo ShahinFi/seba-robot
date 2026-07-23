@@ -1,6 +1,7 @@
 #include "state_estimation.h"
 
 #include "control/control_parameters.h"
+#include "control/motion_control/motion_control.h"
 #include "encoder/encoder.h"
 #include "imu/imu.h"
 
@@ -292,6 +293,10 @@ static void StateEstimation_Update(void)
         state.encoder_valid;
 
     state.update_count++;
+
+    MotionControl_Update(
+        &state
+    );
 }
 
 static float StateEstimation_Filter(
