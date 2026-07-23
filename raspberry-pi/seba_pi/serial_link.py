@@ -1,3 +1,5 @@
+"""Reusable STM32 serial link for Raspberry Pi applications."""
+
 import threading
 import time
 from collections import deque
@@ -14,6 +16,8 @@ COMMAND_MAX_ATTEMPTS = 20
 
 
 class SerialLink:
+    """Maintain telemetry, queued commands, retries, and ACK state."""
+
     def __init__(self, port, baud):
         self.port = port
         self.baud = baud
@@ -53,6 +57,8 @@ class SerialLink:
         self,
         command,
     ):
+        """Queue one STM32 command and return the assigned command ID."""
+
         text = command.strip()
         if not text:
             raise ValueError("empty command")
@@ -81,6 +87,8 @@ class SerialLink:
         return f"queued id={command_id}"
 
     def snapshot(self):
+        """Return the latest telemetry snapshot and any link error."""
+
         age = time.monotonic() - self._last_telemetry_s
         if self._telemetry is None:
             return None, "", self._error
@@ -91,6 +99,8 @@ class SerialLink:
         return self._telemetry, self._telemetry_raw, None
 
     def command_status(self):
+        """Return the current command queue and last ACK state."""
+
         with self._condition:
             inflight_id = (
                 self._inflight_command["id"]
@@ -213,6 +223,8 @@ class SerialLink:
 
 
 def parse_telemetry(line):
+    """Parse one TEL line from the STM32 into typed key/value data."""
+
     if not line.startswith("TEL "):
         raise ValueError("telemetry response missing TEL prefix")
 

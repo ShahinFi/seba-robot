@@ -1,1 +1,1 @@
-# SEBA Pi support package.
+"""Shared Raspberry Pi support code for SEBA-ROBOT applications."""

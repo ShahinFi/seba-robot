@@ -1,3 +1,5 @@
+"""HTTP routes for the Raspberry Pi tuner app."""
+
 import json
 import mimetypes
 from http.server import BaseHTTPRequestHandler
@@ -9,6 +11,8 @@ STATIC_DIR = Path(__file__).with_name("static")
 
 
 class TunerHandler(BaseHTTPRequestHandler):
+    """Serve tuner assets and JSON endpoints backed by a link object."""
+
     link = None
 
     def do_GET(self):
@@ -78,6 +82,8 @@ class TunerHandler(BaseHTTPRequestHandler):
         return json.loads(raw.decode("utf-8"))
 
     def _send_static_file(self, filename):
+        """Serve a file from the tuner static asset directory."""
+
         path = STATIC_DIR / filename
         if not path.is_file():
             self.send_error(404)
@@ -95,6 +101,8 @@ class TunerHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _send_json(self, payload, status=200):
+        """Send a JSON response with the given HTTP status."""
+
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Run the SEBA-ROBOT tuner web server on the Raspberry Pi."""
+
 import argparse
 import os
 import sys
@@ -8,6 +10,7 @@ from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 if str(PROJECT_DIR) not in sys.path:
+    # Allow running this file directly from the tuner directory.
     sys.path.insert(0, str(PROJECT_DIR))
 
 from http_handler import TunerHandler
@@ -20,6 +23,8 @@ DEFAULT_HTTP_PORT = 8080
 
 
 def main():
+    """Parse runtime settings and start the tuner HTTP server."""
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--serial",
