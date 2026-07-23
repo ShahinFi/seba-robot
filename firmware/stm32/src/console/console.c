@@ -1,6 +1,7 @@
 #include "console.h"
 
 #include "control/actuator/actuator.h"
+#include "control/motion_control/motion_control.h"
 #include "control/state_estimation/state_estimation.h"
 #include "serial/serial.h"
 #include "tests/current_sensor_test.h"
@@ -8,20 +9,26 @@
 #include "tests/imu_test.h"
 #include "tests/motor_test.h"
 
+#include "stm32g4xx_hal.h"
+
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define CONSOLE_LINE_LENGTH    64U
-#define CONSOLE_MAX_ARGUMENTS  4
+#define CONSOLE_LINE_LENGTH   160U
+#define CONSOLE_MAX_ARGUMENTS   5
+#define CONSOLE_RECENT_COMMAND_IDS  16U
 
 static char input_line[CONSOLE_LINE_LENGTH];
 static uint32_t input_length;
 
 static void Console_ProcessByte(uint8_t byte);
 static void Console_ExecuteLine(char *line);
+static bool Console_TryExecuteFramedCommand(char *line);
+static bool Console_CommandIdWasSeen(uint32_t command_id);
+static void Console_RememberCommandId(uint32_t command_id);
 
 static int Console_Tokenize(
     char *line,
@@ -54,6 +61,21 @@ static void Console_HandleState(
     char *arguments[]
 );
 
+static void Console_HandleBalance(
+    int argument_count,
+    char *arguments[]
+);
+
+static void Console_HandleTelemetry(
+    int argument_count,
+    char *arguments[]
+);
+
+static void Console_HandleSystem(
+    int argument_count,
+    char *arguments[]
+);
+
 static void Console_HandleIMU(
     int argument_count,
     char *arguments[]
@@ -71,27 +93,32 @@ static bool Console_ParseInt32(
     int32_t *value
 );
 
+static bool Console_ParseFloat(
+    const char *text,
+    float minimum,
+    float maximum,
+    float *value
+);
+
 static void Console_PrintActuatorConfig(void);
 static void Console_PrintActuatorStatus(void);
+static void Console_PrintBalanceStatus(void);
 static void Console_PrintState(void);
 static void Console_PrintHelp(void);
-static void Console_PrintPrompt(void);
+
+static uint32_t recent_command_ids[CONSOLE_RECENT_COMMAND_IDS];
+static uint32_t recent_command_id_index;
 
 void Console_Init(void)
 {
     input_length = 0U;
     input_line[0] = '\0';
-
-    Serial_WriteLine("");
-    Serial_WriteLine(
-        "SEBA-ROBOT console ready."
+    memset(
+        recent_command_ids,
+        0,
+        sizeof(recent_command_ids)
     );
-
-    Serial_WriteLine(
-        "Type 'help' for commands."
-    );
-
-    Console_PrintPrompt();
+    recent_command_id_index = 0U;
 }
 
 void Console_Process(void)
@@ -118,14 +145,10 @@ static void Console_ProcessByte(uint8_t byte)
 
         input_line[input_length] = '\0';
 
-        Serial_WriteLine("");
-
         Console_ExecuteLine(input_line);
 
         input_length = 0U;
         input_line[0] = '\0';
-
-        Console_PrintPrompt();
 
         return;
     }
@@ -140,12 +163,6 @@ static void Console_ProcessByte(uint8_t byte)
             input_length--;
 
             input_line[input_length] = '\0';
-
-            /*
-             * Move back, erase the displayed character, then
-             * move back again on a simple serial terminal.
-             */
-            Serial_Write("\b \b");
         }
 
         return;
@@ -171,13 +188,9 @@ static void Console_ProcessByte(uint8_t byte)
         input_length = 0U;
         input_line[0] = '\0';
 
-        Serial_WriteLine("");
-
         Serial_WriteLine(
             "ERROR: command is too long."
         );
-
-        Console_PrintPrompt();
 
         return;
     }
@@ -188,20 +201,16 @@ static void Console_ProcessByte(uint8_t byte)
     input_length++;
 
     input_line[input_length] = '\0';
-
-    {
-        char echo[2];
-
-        echo[0] = (char)byte;
-        echo[1] = '\0';
-
-        Serial_Write(echo);
-    }
 }
 
 static void Console_ExecuteLine(char *line)
 {
     char *arguments[CONSOLE_MAX_ARGUMENTS];
+
+    if (Console_TryExecuteFramedCommand(line))
+    {
+        return;
+    }
 
     const int argument_count =
         Console_Tokenize(
@@ -281,6 +290,36 @@ static void Console_ExecuteLine(char *line)
         return;
     }
 
+    if (strcmp(arguments[0], "balance") == 0)
+    {
+        Console_HandleBalance(
+            argument_count,
+            arguments
+        );
+
+        return;
+    }
+
+    if (strcmp(arguments[0], "telemetry") == 0)
+    {
+        Console_HandleTelemetry(
+            argument_count,
+            arguments
+        );
+
+        return;
+    }
+
+    if (strcmp(arguments[0], "system") == 0)
+    {
+        Console_HandleSystem(
+            argument_count,
+            arguments
+        );
+
+        return;
+    }
+
     if (strcmp(arguments[0], "imu") == 0)
     {
         Console_HandleIMU(
@@ -298,6 +337,104 @@ static void Console_ExecuteLine(char *line)
     Serial_WriteLine(
         "Type 'help' for available commands."
     );
+}
+
+static bool Console_TryExecuteFramedCommand(char *line)
+{
+    char *id_text;
+    char *command;
+    int32_t command_id;
+
+    if (strncmp(line, "CMD ", 4U) != 0)
+    {
+        return false;
+    }
+
+    id_text =
+        line + 4U;
+
+    command =
+        strchr(id_text, ' ');
+
+    if (command == NULL)
+    {
+        Serial_WriteLine(
+            "ACK 0 ERROR"
+        );
+
+        return true;
+    }
+
+    *command = '\0';
+    command++;
+
+    if (
+        !Console_ParseInt32(
+            id_text,
+            1,
+            2147483647L,
+            &command_id
+        ) ||
+        command[0] == '\0'
+    )
+    {
+        Serial_WriteLine(
+            "ACK 0 ERROR"
+        );
+
+        return true;
+    }
+
+    Serial_Write("ACK ");
+    Serial_WriteUInt32((uint32_t)command_id);
+    Serial_WriteLine(" OK");
+
+    if (
+        Console_CommandIdWasSeen(
+            (uint32_t)command_id
+        )
+    )
+    {
+        return true;
+    }
+
+    Console_RememberCommandId(
+        (uint32_t)command_id
+    );
+
+    Console_ExecuteLine(command);
+
+    return true;
+}
+
+static bool Console_CommandIdWasSeen(uint32_t command_id)
+{
+    for (
+        uint32_t index = 0U;
+        index < CONSOLE_RECENT_COMMAND_IDS;
+        index++
+    )
+    {
+        if (recent_command_ids[index] == command_id)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static void Console_RememberCommandId(uint32_t command_id)
+{
+    recent_command_ids[recent_command_id_index] =
+        command_id;
+
+    recent_command_id_index++;
+
+    if (recent_command_id_index >= CONSOLE_RECENT_COMMAND_IDS)
+    {
+        recent_command_id_index = 0U;
+    }
 }
 
 static int Console_Tokenize(
@@ -340,7 +477,7 @@ static void Console_HandleMotor(
         strcmp(arguments[1], "stop") == 0
     )
     {
-        Actuator_Disable();
+        MotionControl_Disable();
         MotorTest_Stop();
 
         Serial_WriteLine(
@@ -373,7 +510,7 @@ static void Console_HandleMotor(
 
     if (strcmp(arguments[1], "left") == 0)
     {
-        Actuator_Disable();
+        MotionControl_Disable();
 
         if (!MotorTest_SetLeft(speed))
         {
@@ -397,7 +534,7 @@ static void Console_HandleMotor(
 
     if (strcmp(arguments[1], "right") == 0)
     {
-        Actuator_Disable();
+        MotionControl_Disable();
 
         if (!MotorTest_SetRight(speed))
         {
@@ -570,7 +707,7 @@ static void Console_HandleActuator(
     {
         if (strcmp(arguments[1], "stop") == 0)
         {
-            Actuator_Disable();
+            MotionControl_Disable();
 
             Serial_WriteLine(
                 "OK: actuator current control stopped."
@@ -627,6 +764,7 @@ static void Console_HandleActuator(
             }
 
             MotorTest_Stop();
+            MotionControl_Disable();
             Actuator_Enable();
 
             Serial_WriteLine(
@@ -651,6 +789,7 @@ static void Console_HandleActuator(
             }
 
             MotorTest_Stop();
+            MotionControl_Disable();
             Actuator_Enable();
 
             Serial_WriteLine(
@@ -871,6 +1010,7 @@ static void Console_HandleActuator(
         }
 
         MotorTest_Stop();
+        MotionControl_Disable();
         Actuator_Enable();
 
         if (strcmp(arguments[1], "both") == 0)
@@ -939,6 +1079,269 @@ static void Console_HandleState(
     }
 
     Console_PrintState();
+}
+
+static void Console_HandleBalance(
+    int argument_count,
+    char *arguments[]
+)
+{
+    int32_t value;
+    int32_t column;
+    uint32_t row;
+    float float_value;
+    float second_float_value;
+
+    if (
+        argument_count == 3 &&
+        (
+            strcmp(arguments[1], "max-torque") == 0 ||
+            strcmp(arguments[1], "gain-scale") == 0
+        )
+    )
+    {
+        if (!Console_ParseInt32(
+                arguments[2],
+                0,
+                10000,
+                &value
+            ))
+        {
+            Serial_WriteLine(
+                "ERROR: balance value must be 0 to 10000."
+            );
+
+            return;
+        }
+
+        if (strcmp(arguments[1], "max-torque") == 0)
+        {
+            if (!MotionControl_SetMaxWheelTorque(
+                    (float)value
+                ))
+            {
+                Serial_WriteLine(
+                    "ERROR: balance max torque update failed."
+                );
+
+                return;
+            }
+
+            Serial_WriteLine(
+                "OK: balance torque limit updated."
+            );
+
+            return;
+        }
+
+        if (!MotionControl_SetGainScale(
+                (float)value /
+                100.0F
+            ))
+        {
+            Serial_WriteLine(
+                "ERROR: balance gain scale update failed."
+            );
+
+            return;
+        }
+
+        Serial_WriteLine(
+            "OK: balance gain scale updated."
+        );
+
+        return;
+    }
+
+    if (
+        argument_count == 4 &&
+        strcmp(arguments[1], "command") == 0
+    )
+    {
+        if (
+            !Console_ParseFloat(
+                arguments[2],
+                -10.0F,
+                10.0F,
+                &float_value
+            ) ||
+            !Console_ParseFloat(
+                arguments[3],
+                -20.0F,
+                20.0F,
+                &second_float_value
+            )
+        )
+        {
+            Serial_WriteLine(
+                "ERROR: balance command values are out of range."
+            );
+
+            return;
+        }
+
+        (void)MotionControl_SetCommand(
+            float_value,
+            second_float_value
+        );
+
+        Serial_WriteLine(
+            "OK: balance command updated."
+        );
+
+        return;
+    }
+
+    if (
+        argument_count == 5 &&
+        strcmp(arguments[1], "gain") == 0
+    )
+    {
+        if (strcmp(arguments[2], "left") == 0)
+        {
+            row = 0U;
+        }
+        else if (strcmp(arguments[2], "right") == 0)
+        {
+            row = 1U;
+        }
+        else
+        {
+            Serial_WriteLine(
+                "ERROR: balance gain side must be 'left' or 'right'."
+            );
+
+            return;
+        }
+
+        if (
+            !Console_ParseInt32(
+                arguments[3],
+                0,
+                5,
+                &column
+            ) ||
+            !Console_ParseFloat(
+                arguments[4],
+                -100000.0F,
+                100000.0F,
+                &float_value
+            )
+        )
+        {
+            Serial_WriteLine(
+                "ERROR: balance gain requires column 0 to 5 and numeric gain."
+            );
+
+            return;
+        }
+
+        if (!MotionControl_SetGain(
+                row,
+                (uint32_t)column,
+                float_value
+            ))
+        {
+            Serial_WriteLine(
+                "ERROR: balance gain update failed."
+            );
+
+            return;
+        }
+
+        Serial_WriteLine(
+            "OK: balance gain updated."
+        );
+
+        return;
+    }
+
+    if (argument_count != 2)
+    {
+        Serial_WriteLine(
+            "ERROR: usage: balance <start|stop|status> OR balance max-torque <mNm> OR balance gain-scale <percent> OR balance command <v> <yaw> OR balance gain <left|right> <0...5> <value>"
+        );
+
+        return;
+    }
+
+    if (strcmp(arguments[1], "start") == 0)
+    {
+        MotorTest_Stop();
+        MotionControl_Enable();
+
+        Serial_WriteLine(
+            "OK: balance control started."
+        );
+
+        return;
+    }
+
+    if (strcmp(arguments[1], "stop") == 0)
+    {
+        MotionControl_Disable();
+
+        Serial_WriteLine(
+            "OK: balance control stopped."
+        );
+
+        return;
+    }
+
+    if (strcmp(arguments[1], "status") == 0)
+    {
+        Console_PrintBalanceStatus();
+        return;
+    }
+
+    Serial_WriteLine(
+        "ERROR: usage: balance <start|stop|status> OR balance max-torque <mNm> OR balance gain-scale <percent> OR balance command <v> <yaw> OR balance gain <left|right> <0...5> <value>"
+    );
+}
+
+static void Console_HandleTelemetry(
+    int argument_count,
+    char *arguments[]
+)
+{
+    if (
+        argument_count != 2 ||
+        strcmp(arguments[1], "read") != 0
+    )
+    {
+        Serial_WriteLine(
+            "ERROR: usage: telemetry read"
+        );
+
+        return;
+    }
+
+    Console_PrintTelemetry();
+}
+
+static void Console_HandleSystem(
+    int argument_count,
+    char *arguments[]
+)
+{
+    if (
+        argument_count != 2 ||
+        strcmp(arguments[1], "reset") != 0
+    )
+    {
+        Serial_WriteLine(
+            "ERROR: usage: system reset"
+        );
+
+        return;
+    }
+
+    Serial_WriteLine(
+        "OK: resetting STM32."
+    );
+
+    HAL_Delay(20U);
+    NVIC_SystemReset();
 }
 
 static bool Console_ParseSpeed(
@@ -1029,6 +1432,50 @@ static bool Console_ParseInt32(
     return true;
 }
 
+static bool Console_ParseFloat(
+    const char *text,
+    float minimum,
+    float maximum,
+    float *value
+)
+{
+    char *end;
+    float parsed;
+
+    if (
+        text == NULL ||
+        value == NULL ||
+        text[0] == '\0'
+    )
+    {
+        return false;
+    }
+
+    errno = 0;
+
+    parsed =
+        strtof(
+            text,
+            &end
+        );
+
+    if (
+        end == text ||
+        *end != '\0' ||
+        errno == ERANGE ||
+        parsed < minimum ||
+        parsed > maximum
+    )
+    {
+        return false;
+    }
+
+    *value =
+        parsed;
+
+    return true;
+}
+
 static void Console_PrintActuatorConfig(void)
 {
     ActuatorConfig config;
@@ -1115,6 +1562,53 @@ static void Console_PrintActuatorStatus(void)
     Serial_WriteLine("");
 }
 
+static void Console_PrintBalanceStatus(void)
+{
+    MotionControlStatus status;
+
+    MotionControl_GetStatus(
+        &status
+    );
+
+    Serial_Write("Balance: enabled=");
+    Serial_Write(status.enabled ? "yes" : "no");
+
+    Serial_Write(" fault=");
+    Serial_Write(status.fault_active ? "ACTIVE" : "normal");
+
+    Serial_Write(" state_invalid=");
+    Serial_Write(status.state_invalid ? "yes" : "no");
+
+    Serial_Write(" fall=");
+    Serial_Write(status.fall_detected ? "yes" : "no");
+
+    Serial_Write(" v_cmd=");
+    Serial_WriteFloat3(status.forward_velocity_command_mps);
+
+    Serial_Write(" yaw_cmd=");
+    Serial_WriteFloat3(status.yaw_rate_command_rads);
+
+    Serial_Write(" left_T=");
+    Serial_WriteFloat3(status.left_torque_command_mnm);
+
+    Serial_Write(" right_T=");
+    Serial_WriteFloat3(status.right_torque_command_mnm);
+
+    Serial_Write(" left_dT=");
+    Serial_WriteFloat3(status.left_torque_rate_mnm_s);
+
+    Serial_Write(" right_dT=");
+    Serial_WriteFloat3(status.right_torque_rate_mnm_s);
+
+    Serial_Write(" max_T=");
+    Serial_WriteFloat3(status.max_wheel_torque_mnm);
+
+    Serial_Write(" gain=");
+    Serial_WriteFloat3(status.motion_gain_scale);
+
+    Serial_WriteLine("");
+}
+
 static void Console_PrintState(void)
 {
     RobotState state;
@@ -1162,6 +1656,114 @@ static void Console_PrintState(void)
 
     Serial_Write("  psi_ddot [rad/s^2]: ");
     Serial_WriteFloat3(state.yaw_acceleration_rads2);
+    Serial_WriteLine("");
+}
+
+void Console_PrintTelemetry(void)
+{
+    RobotState state;
+    MotionControlStatus balance;
+    ActuatorStatus actuator;
+
+    StateEstimation_GetState(
+        &state
+    );
+
+    MotionControl_GetStatus(
+        &balance
+    );
+
+    Actuator_GetStatus(
+        &actuator
+    );
+
+    Serial_Write("TEL valid=");
+    Serial_Write(state.valid ? "1" : "0");
+
+    Serial_Write(" imu=");
+    Serial_Write(state.imu_valid ? "1" : "0");
+
+    Serial_Write(" enc=");
+    Serial_Write(state.encoder_valid ? "1" : "0");
+
+    Serial_Write(" updates=");
+    Serial_WriteUInt32(state.update_count);
+
+    Serial_Write(" v=");
+    Serial_WriteFloat3(state.forward_velocity_mps);
+
+    Serial_Write(" theta=");
+    Serial_WriteFloat3(state.pitch_rad);
+
+    Serial_Write(" theta_dot=");
+    Serial_WriteFloat3(state.pitch_rate_rads);
+
+    Serial_Write(" psi_dot=");
+    Serial_WriteFloat3(state.yaw_rate_rads);
+
+    Serial_Write(" v_dot=");
+    Serial_WriteFloat3(state.forward_acceleration_mps2);
+
+    Serial_Write(" theta_ddot=");
+    Serial_WriteFloat3(state.pitch_acceleration_rads2);
+
+    Serial_Write(" psi_ddot=");
+    Serial_WriteFloat3(state.yaw_acceleration_rads2);
+
+    Serial_Write(" balance=");
+    Serial_Write(balance.enabled ? "1" : "0");
+
+    Serial_Write(" fault=");
+    Serial_Write(balance.fault_active ? "1" : "0");
+
+    Serial_Write(" fall=");
+    Serial_Write(balance.fall_detected ? "1" : "0");
+
+    Serial_Write(" v_cmd=");
+    Serial_WriteFloat3(balance.forward_velocity_command_mps);
+
+    Serial_Write(" yaw_cmd=");
+    Serial_WriteFloat3(balance.yaw_rate_command_rads);
+
+    Serial_Write(" left_T=");
+    Serial_WriteFloat3(balance.left_torque_command_mnm);
+
+    Serial_Write(" right_T=");
+    Serial_WriteFloat3(balance.right_torque_command_mnm);
+
+    Serial_Write(" left_dT=");
+    Serial_WriteFloat3(balance.left_torque_rate_mnm_s);
+
+    Serial_Write(" right_dT=");
+    Serial_WriteFloat3(balance.right_torque_rate_mnm_s);
+
+    Serial_Write(" max_T=");
+    Serial_WriteFloat3(balance.max_wheel_torque_mnm);
+
+    Serial_Write(" gain=");
+    Serial_WriteFloat3(balance.motion_gain_scale);
+
+    Serial_Write(" act=");
+    Serial_Write(actuator.enabled ? "1" : "0");
+
+    Serial_Write(" left_ref=");
+    Serial_WriteInt32(actuator.left_current_reference_ma);
+
+    Serial_Write(" right_ref=");
+    Serial_WriteInt32(actuator.right_current_reference_ma);
+
+    Serial_Write(" left_meas=");
+    Serial_WriteInt32(actuator.left_current_measured_ma);
+
+    Serial_Write(" right_meas=");
+    Serial_WriteInt32(actuator.right_current_measured_ma);
+
+    Serial_Write(" left_pwm=");
+    Serial_WriteInt32(actuator.left_command_permille);
+
+    Serial_Write(" right_pwm=");
+    Serial_WriteInt32(actuator.right_command_permille);
+
     Serial_WriteLine("");
 }
 
@@ -1262,6 +1864,42 @@ static void Console_PrintHelp(void)
     );
 
     Serial_WriteLine(
+        "  balance start"
+    );
+
+    Serial_WriteLine(
+        "  balance stop"
+    );
+
+    Serial_WriteLine(
+        "  balance status"
+    );
+
+    Serial_WriteLine(
+        "  balance max-torque <mNm>"
+    );
+
+    Serial_WriteLine(
+        "  balance gain-scale <percent>"
+    );
+
+    Serial_WriteLine(
+        "  balance command <v_mps> <yaw_rate_rads>"
+    );
+
+    Serial_WriteLine(
+        "  balance gain <left|right> <0...5> <value>"
+    );
+
+    Serial_WriteLine(
+        "  telemetry read"
+    );
+
+    Serial_WriteLine(
+        "  system reset"
+    );
+
+    Serial_WriteLine(
         "  imu read"
     );
 
@@ -1282,9 +1920,4 @@ static void Console_PrintHelp(void)
     Serial_WriteLine(
         "Zero = stop that motor"
     );
-}
-
-static void Console_PrintPrompt(void)
-{
-    Serial_Write("> ");
 }

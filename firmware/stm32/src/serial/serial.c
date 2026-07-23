@@ -8,17 +8,17 @@
 #include <string.h>
 
 /*
- * ST-LINK Virtual COM Port:
+ * Raspberry Pi UART:
  *
- * PA2 = LPUART1_TX
- * PA3 = LPUART1_RX
- * Alternate function 12
+ * PC10 = USART3_TX
+ * PC11 = USART3_RX
+ * Alternate function 7
  */
-#define SERIAL_TX_PORT              GPIOA
-#define SERIAL_TX_PIN               GPIO_PIN_2
+#define SERIAL_TX_PORT              GPIOC
+#define SERIAL_TX_PIN               GPIO_PIN_10
 
-#define SERIAL_RX_PORT              GPIOA
-#define SERIAL_RX_PIN               GPIO_PIN_3
+#define SERIAL_RX_PORT              GPIOC
+#define SERIAL_RX_PIN               GPIO_PIN_11
 
 #define SERIAL_BAUD_RATE            115200U
 #define SERIAL_TX_TIMEOUT_MS        100U
@@ -299,7 +299,7 @@ static bool Serial_GPIOInit(void)
 {
     GPIO_InitTypeDef gpio = {0};
 
-    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
 
     gpio.Pin =
         SERIAL_TX_PIN |
@@ -315,10 +315,10 @@ static bool Serial_GPIOInit(void)
         GPIO_SPEED_FREQ_HIGH;
 
     gpio.Alternate =
-        GPIO_AF12_LPUART1;
+        GPIO_AF7_USART3;
 
     HAL_GPIO_Init(
-        GPIOA,
+        GPIOC,
         &gpio
     );
 
@@ -330,10 +330,10 @@ static bool Serial_UARTInit(void)
     RCC_PeriphCLKInitTypeDef peripheral_clock = {0};
 
     peripheral_clock.PeriphClockSelection =
-        RCC_PERIPHCLK_LPUART1;
+        RCC_PERIPHCLK_USART3;
 
-    peripheral_clock.Lpuart1ClockSelection =
-        RCC_LPUART1CLKSOURCE_PCLK1;
+    peripheral_clock.Usart3ClockSelection =
+        RCC_USART3CLKSOURCE_PCLK1;
 
     if (HAL_RCCEx_PeriphCLKConfig(
             &peripheral_clock
@@ -342,10 +342,10 @@ static bool Serial_UARTInit(void)
         return false;
     }
 
-    __HAL_RCC_LPUART1_CLK_ENABLE();
+    __HAL_RCC_USART3_CLK_ENABLE();
 
     serial_uart.Instance =
-        LPUART1;
+        USART3;
 
     serial_uart.Init.BaudRate =
         SERIAL_BAUD_RATE;
@@ -405,17 +405,17 @@ static bool Serial_UARTInit(void)
     }
 
     /*
-     * Enable the LPUART1 interrupt after the peripheral has
+     * Enable the USART3 interrupt after the peripheral has
      * been completely configured.
      */
     HAL_NVIC_SetPriority(
-        LPUART1_IRQn,
-        6U,
+        USART3_IRQn,
+        4U,
         0U
     );
 
     HAL_NVIC_EnableIRQ(
-        LPUART1_IRQn
+        USART3_IRQn
     );
 
     return true;
@@ -487,7 +487,7 @@ static void Serial_WriteUnsigned64(
 /*
  * STM32 interrupt entry point.
  */
-void LPUART1_IRQHandler(void)
+void USART3_IRQHandler(void)
 {
     HAL_UART_IRQHandler(
         &serial_uart
@@ -506,7 +506,7 @@ void HAL_UART_RxCpltCallback(
 
     if (
         uart == NULL ||
-        uart->Instance != LPUART1
+        uart->Instance != USART3
     )
     {
         return;
@@ -556,7 +556,7 @@ void HAL_UART_ErrorCallback(
 {
     if (
         uart == NULL ||
-        uart->Instance != LPUART1
+        uart->Instance != USART3
     )
     {
         return;

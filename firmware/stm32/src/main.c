@@ -1,6 +1,7 @@
 #include "stm32g4xx_hal.h"
 
 #include "control/actuator/actuator.h"
+#include "control/motion_control/motion_control.h"
 #include "control/state_estimation/state_estimation.h"
 #include "console/console.h"
 #include "current_sensor/current_sensor.h"
@@ -11,7 +12,10 @@
 #include "tests/motor_test.h"
 
 static void SystemClock_Init(void);
+static void StreamTelemetry(void);
 static void Error_Handler(void);
+
+#define TELEMETRY_STREAM_PERIOD_MS  500U
 
 int main(void)
 {
@@ -28,6 +32,7 @@ int main(void)
     }
 
     Actuator_Init();
+    MotionControl_Init();
 
     /*
      * Serial must be available before initializing the IMU,
@@ -38,26 +43,10 @@ int main(void)
         Error_Handler();
     }
 
-    Serial_WriteLine("");
-    Serial_WriteLine("Initializing IMU...");
-
     const bool imu_initialized =
         IMU_Init();
 
     StateEstimation_Init();
-
-    if (imu_initialized)
-    {
-        Serial_WriteLine(
-            "IMU initialization successful."
-        );
-    }
-    else
-    {
-        Serial_WriteLine(
-            "ERROR: IMU initialization failed."
-        );
-    }
 
     /*
      * Console input starts after IMU initialization so startup
@@ -68,13 +57,36 @@ int main(void)
 
     while (1)
     {
+        Console_Process();
+
         if (imu_initialized)
         {
             IMU_Process();
         }
 
         Console_Process();
+        StreamTelemetry();
     }
+}
+
+static void StreamTelemetry(void)
+{
+    static uint32_t last_stream_ms = 0U;
+    const uint32_t now_ms =
+        HAL_GetTick();
+
+    if (
+        now_ms - last_stream_ms <
+        TELEMETRY_STREAM_PERIOD_MS
+    )
+    {
+        return;
+    }
+
+    last_stream_ms =
+        now_ms;
+
+    Console_PrintTelemetry();
 }
 
 static void SystemClock_Init(void)
