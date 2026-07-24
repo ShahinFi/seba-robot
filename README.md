@@ -82,7 +82,6 @@ seba-robot/
 |       |-- README.md
 |       |-- seba_control.slx
 |       `-- results/
-|-- docs/
 |-- hardware/
 |   `-- README.md
 |-- firmware/
@@ -102,7 +101,6 @@ seba-robot/
 
 - `control/` contains the robot dynamics and controller documentation.
 - `control/simulink/` contains the simulation model, simulation documentation, and test results.
-- `docs/` contains supporting project documents.
 - `hardware/` contains documentation for the built robot hardware, including electronics, wiring, power distribution, and physical construction.
 - `firmware/stm32/` contains the STM32G474RE PlatformIO firmware.
 - `raspberry-pi/` contains the Raspberry Pi web server, operator control panel, engineering tuner, serial-link backend, and systemd autostart service.
