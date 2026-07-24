@@ -263,15 +263,12 @@ function updateState(telemetry) {
     Number(telemetry.balance) !== 0;
   const faultActive =
     Number(telemetry.fault) !== 0;
-  const theta =
-    telemetry.theta ?? "-";
 
   setChip(
     "mode",
     faultActive ? "faulted" : (balanceActive ? "balancing" : "stopped"),
     faultActive ? "bad" : (balanceActive ? "ok" : "muted")
   );
-  setChip("pitch_chip", `theta ${theta}`, faultActive ? "bad" : "muted");
   updateFaultBanner(telemetry);
 
   for (const [, key] of stateMetrics) {
