@@ -17,6 +17,10 @@
 
 #define COMMAND_DISPATCHER_MAX_ARGUMENTS  5
 
+/*
+ * Top-level command words are stable public serial commands.
+ * Handler modules own validation and command-specific output.
+ */
 CommandResult CommandDispatcher_ExecuteLine(
     char *line
 )

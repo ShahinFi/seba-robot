@@ -40,7 +40,8 @@ bool CurrentSensor_ReadRight(
 );
 
 /*
- * Returns the latest filtered readings for both sensors.
+ * Returns the latest filtered readings for both sensors. The
+ * readings are produced by the timer-triggered DMA sample path.
  */
 bool CurrentSensor_ReadBoth(
     CurrentSensorReading *left,

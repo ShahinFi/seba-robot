@@ -2,6 +2,10 @@
 
 #include "serial/serial.h"
 
+/*
+ * Current-sensor diagnostics are serial print helpers around
+ * production readings and raw capture data.
+ */
 static void CurrentSensorTest_PrintReading(
     const char *label,
     const CurrentSensorReading *reading

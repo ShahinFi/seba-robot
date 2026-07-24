@@ -1,6 +1,6 @@
 #include "telemetry_stream.h"
 
-#include "control/actuator/actuator.h"
+#include "control/actuator_control/actuator_control.h"
 #include "control/motion_control/motion_control.h"
 #include "control/state_estimation/state_estimation.h"
 #include "serial/serial.h"
@@ -9,7 +9,7 @@ void TelemetryStream_WriteSnapshot(void)
 {
     RobotState state;
     MotionControlStatus balance;
-    ActuatorStatus actuator;
+    ActuatorControlStatus actuator;
 
     StateEstimation_GetState(
         &state
@@ -19,10 +19,14 @@ void TelemetryStream_WriteSnapshot(void)
         &balance
     );
 
-    Actuator_GetStatus(
+    ActuatorControl_GetStatus(
         &actuator
     );
 
+    /*
+     * TEL is a single key-value line parsed by the Raspberry Pi.
+     * Field names are protocol names and should remain stable.
+     */
     Serial_Write("TEL valid=");
     Serial_Write(state.valid ? "1" : "0");
 

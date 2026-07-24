@@ -33,6 +33,11 @@
 #define RIGHT_SLEEP_PORT   GPIOB
 #define RIGHT_SLEEP_PIN    GPIO_PIN_5
 
+/*
+ * Public positive motor commands mean robot-forward wheel
+ * torque. These signs compensate for opposite left/right motor
+ * mounting.
+ */
 #define LEFT_MOTOR_SIGN   -1
 #define RIGHT_MOTOR_SIGN   1
 
@@ -311,6 +316,10 @@ static bool Motor_DirectionChanges(
     int16_t next_command
 )
 {
+    /*
+     * Callers remove PWM before a sign change so the driver does
+     * not switch the H-bridge under load.
+     */
     return
         (
             previous_command < 0 &&

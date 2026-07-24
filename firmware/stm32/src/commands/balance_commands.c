@@ -210,6 +210,10 @@ CommandResult BalanceCommands_Handle(
         ControlParameters parameters;
         RobotState state;
 
+        /*
+         * Repeated start commands are idempotent. Restarting the
+         * controller while balanced would reset the torque state.
+         */
         if (MotionControl_IsEnabled())
         {
             Serial_WriteLine(
@@ -227,6 +231,10 @@ CommandResult BalanceCommands_Handle(
             &state
         );
 
+        /*
+         * Emit both attempted and accepted/rejected arm events so
+         * the Pi log records the exact state used for the decision.
+         */
         BalanceCommands_PrintArmEvent(
             "attempt",
             "none",
@@ -444,6 +452,10 @@ static void BalanceCommands_PrintArmEvent(
     const RobotState *state
 )
 {
+    /*
+     * EVT balance arm is parsed by the Raspberry Pi as a log
+     * event, not as periodic telemetry.
+     */
     Serial_Write("EVT balance arm result=");
     Serial_Write(result);
     Serial_Write(" reason=");

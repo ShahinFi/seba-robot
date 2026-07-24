@@ -33,7 +33,8 @@
 #define CURRENT_SENSOR_SETTLE_TIME_MS            20U
 
 /*
- * Sign constants define the positive motor-current convention.
+ * Positive current follows the same robot-forward wheel torque
+ * convention used by the motor and actuator-control modules.
  */
 #define LEFT_CURRENT_SIGN   -1L
 #define RIGHT_CURRENT_SIGN  -1L
@@ -144,6 +145,11 @@ bool CurrentSensor_Init(void)
 
     __HAL_RCC_ADC12_CLK_ENABLE();
 
+    /*
+     * Zero-current offsets are measured with software-triggered
+     * conversions before timed DMA sampling takes ownership of
+     * the ADC peripherals.
+     */
     if (!CurrentSensor_ADC1_Init(
             false,
             true
@@ -251,6 +257,11 @@ bool CurrentSensor_DiagnosticCapture(
     const uint32_t start_ms =
         HAL_GetTick();
 
+    /*
+     * Diagnostic capture is filled by the DMA sample path. The
+     * command waits here only until the requested block has been
+     * collected or the expected sample time has been exceeded.
+     */
     if (
         capture == NULL ||
         sample_count == 0U
@@ -421,6 +432,11 @@ static bool CurrentSensor_DMA_Init(void)
     __HAL_RCC_DMAMUX1_CLK_ENABLE();
     __HAL_RCC_DMA1_CLK_ENABLE();
 
+    /*
+     * ADC1 and ADC2 use independent circular DMA channels so the
+     * left and right current sensors are sampled from the same
+     * timer trigger without blocking the actuator loop.
+     */
     right_dma.Instance =
         DMA1_Channel1;
 
@@ -536,6 +552,10 @@ static bool CurrentSensor_Timer_Init(void)
         1U;
 
     /*
+     * The sampling rate is four samples per 20 kHz PWM period.
+     * Each DMA half-buffer therefore averages 40 samples over
+     * ten PWM periods.
+     *
      * MMS = 010 makes TIM6 update events drive TRGO.
      */
     TIM6->CR2 =
@@ -557,6 +577,11 @@ static bool CurrentSensor_ADC1_Init(
 {
     ADC_ChannelConfTypeDef channel = {0};
 
+    /*
+     * ADC1 reads the right ACS711 output. The same initializer
+     * supports startup offset measurement and timer-triggered
+     * DMA sampling.
+     */
     right_adc.Instance = ADC1;
 
     right_adc.Init.ClockPrescaler =
@@ -654,6 +679,10 @@ static bool CurrentSensor_ADC2_Init(
 {
     ADC_ChannelConfTypeDef channel = {0};
 
+    /*
+     * ADC2 reads the left ACS711 output. It mirrors ADC1 so both
+     * current channels have the same conversion timing.
+     */
     left_adc.Instance = ADC2;
 
     left_adc.Init.ClockPrescaler =
@@ -761,6 +790,10 @@ static bool CurrentSensor_StartTimedSampling(void)
         return false;
     }
 
+    /*
+     * Reinitialize both ADCs for TIM6-triggered circular DMA
+     * after the startup zero-offset measurement is complete.
+     */
     if (!CurrentSensor_ADC1_Init(
             true,
             false
@@ -800,6 +833,10 @@ static bool CurrentSensor_StartTimedSampling(void)
         return false;
     }
 
+    /*
+     * Do not report the current sensor initialized until both
+     * DMA paths have produced at least one filtered block.
+     */
     const uint32_t start_ms =
         HAL_GetTick();
 
@@ -912,6 +949,11 @@ static bool CurrentSensor_ReadLatest(
         return false;
     }
 
+    /*
+     * Latest ADC/current values are written from DMA callbacks.
+     * Copy them with interrupts masked, then read the GPIO fault
+     * pins outside the critical section.
+     */
     __disable_irq();
 
     if (channel == CURRENT_SENSOR_LEFT)
@@ -986,6 +1028,11 @@ static void CurrentSensor_ProcessSamples(
         capture = &right_capture;
     }
 
+    /*
+     * DMA callbacks process only the completed half-buffer. The
+     * actuator loop then reads the latest averaged block instead
+     * of raw PWM-ripple samples.
+     */
     for (
         uint32_t index = 0U;
         index < count;
@@ -1081,6 +1128,10 @@ static int32_t CurrentSensor_CountsToMilliamps(
     int32_t direction_sign
 )
 {
+    /*
+     * ACS711 sensitivity is 90 mV/A. The extra 1000 converts
+     * amps to milliamps after ADC counts are converted to mV.
+     */
     const int64_t numerator =
         (int64_t)adc_difference *
         CURRENT_SENSOR_REFERENCE_MV *

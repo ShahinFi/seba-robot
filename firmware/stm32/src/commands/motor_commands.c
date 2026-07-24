@@ -19,6 +19,10 @@ CommandResult MotorCommands_Handle(
         strcmp(arguments[1], "stop") == 0
     )
     {
+        /*
+         * Motor stop clears both closed-loop balance ownership and
+         * direct motor-test output.
+         */
         MotionControl_Disable();
         MotorTest_Stop();
 
@@ -50,6 +54,11 @@ CommandResult MotorCommands_Handle(
         return COMMAND_RESULT_ERROR;
     }
 
+    /*
+     * Direct motor commands are bring-up commands. They take
+     * ownership away from closed-loop balance control before
+     * driving one wheel.
+     */
     if (strcmp(arguments[1], "left") == 0)
     {
         MotionControl_Disable();

@@ -257,6 +257,10 @@ static void IMU_AsyncEventCallback(
         const uint32_t interrupt_state =
             IMU_EnterCritical();
 
+        /*
+         * A BNO085 reset invalidates previously decoded reports
+         * until fresh sensor events arrive.
+         */
         imu_reset_detected = true;
 
         latest_data.acceleration_valid = false;
@@ -496,6 +500,10 @@ static bool IMU_EnableReport(
     configuration.wakeupEnabled =
         false;
 
+    /*
+     * Always-on reports keep the estimator receiving fixed-rate
+     * updates while the robot is balancing.
+     */
     configuration.alwaysOnEnabled =
         true;
 

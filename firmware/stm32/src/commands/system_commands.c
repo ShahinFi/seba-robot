@@ -42,6 +42,10 @@ void SystemCommands_ProcessResetRequest(void)
         return;
     }
 
+    /*
+     * Delay briefly so the OK response can leave the UART before
+     * the MCU resets.
+     */
     HAL_Delay(20U);
     NVIC_SystemReset();
 }

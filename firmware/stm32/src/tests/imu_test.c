@@ -3,6 +3,10 @@
 #include "imu/imu.h"
 #include "serial/serial.h"
 
+/*
+ * IMU diagnostics expose both robot-facing values and native
+ * sensor axes so mounting/sign problems can be checked directly.
+ */
 bool IMUTest_PrintLatest(void)
 {
     IMUData data;

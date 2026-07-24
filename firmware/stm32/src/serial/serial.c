@@ -57,6 +57,10 @@ static volatile uint8_t serial_rx_tail;
 
 static volatile bool serial_rx_overflow;
 
+/*
+ * TX buffering lets telemetry, events, ACKs, and command output
+ * share USART3 without blocking the main loop on each byte.
+ */
 static volatile uint8_t serial_tx_buffer[
     SERIAL_TX_BUFFER_SIZE
 ];
@@ -564,14 +568,14 @@ static void Serial_WriteUnsigned64(
         right--
     )
     {
-        const char temporary =
+        const char swap_byte =
             buffer[left];
 
         buffer[left] =
             buffer[right];
 
         buffer[right] =
-            temporary;
+            swap_byte;
     }
 
     buffer[index] = '\0';

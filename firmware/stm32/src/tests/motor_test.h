@@ -4,6 +4,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+/*
+ * Clears manual motor-test state and leaves both drivers
+ * disabled.
+ */
 void MotorTest_Init(void);
 
 /*
@@ -18,6 +22,10 @@ bool MotorTest_SetRight(int16_t command_percent);
  */
 void MotorTest_Stop(void);
 
+/*
+ * Returns the last accepted manual motor-test command in
+ * percent.
+ */
 int16_t MotorTest_GetLeftCommand(void);
 int16_t MotorTest_GetRightCommand(void);
 

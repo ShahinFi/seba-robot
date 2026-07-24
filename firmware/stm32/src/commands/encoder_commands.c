@@ -29,6 +29,11 @@ CommandResult EncoderCommands_Handle(
     if (strcmp(arguments[1], "reset") == 0)
     {
         EncoderTest_ResetPositions();
+
+        /*
+         * Encoder reset changes the wheel-position reference used
+         * by state estimation, so the estimator is reset with it.
+         */
         StateEstimation_Reset();
 
         return COMMAND_RESULT_OK;

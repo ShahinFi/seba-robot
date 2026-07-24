@@ -3,6 +3,10 @@
 #include "encoder/encoder.h"
 #include "serial/serial.h"
 
+/*
+ * Encoder diagnostics print the signed accumulated counts used
+ * by the estimator.
+ */
 void EncoderTest_PrintPositions(void)
 {
     Encoder_Update();

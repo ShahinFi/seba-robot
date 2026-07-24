@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+/*
+ * Numeric command parsers require complete-token conversion, so
+ * inputs such as "10abc" are rejected instead of being truncated.
+ */
 int CommandParser_Tokenize(
     char *line,
     char *arguments[],

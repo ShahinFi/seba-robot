@@ -6,6 +6,11 @@
 /*
  * Appends compact RobotState key/value fields to the current
  * serial line for event diagnostics.
+ *
+ * Units match RobotState:
+ *   ages in ms
+ *   theta in rad
+ *   theta_dot in rad/s
  */
 void StateEventFormat_WriteState(
     const RobotState *state

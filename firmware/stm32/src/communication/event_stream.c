@@ -39,6 +39,10 @@ static void EventStream_UpdateMotionFault(void)
         return;
     }
 
+    /*
+     * Events are edge-triggered so the Pi log shows state
+     * transitions without being flooded by repeated telemetry.
+     */
     previous_motion_fault_active =
         status.fault_active;
     previous_motion_fault =

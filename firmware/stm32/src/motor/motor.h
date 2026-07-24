@@ -17,6 +17,9 @@ void Motor_Disable(void);
  *   -100 = full duty, reverse direction
  *      0 = stopped
  *   +100 = full duty, forward direction
+ *
+ * Direction is the robot-forward convention after motor-side
+ * sign compensation.
  */
 void Motor_SetLeft(int16_t command_percent);
 void Motor_SetRight(int16_t command_percent);
@@ -27,6 +30,9 @@ void Motor_SetRight(int16_t command_percent);
  *   -1000 = full duty, reverse direction
  *       0 = stopped
  *   +1000 = full duty, forward direction
+ *
+ * Direction is the robot-forward convention after motor-side
+ * sign compensation.
  */
 void Motor_SetLeftPermille(int16_t command_permille);
 void Motor_SetRightPermille(int16_t command_permille);

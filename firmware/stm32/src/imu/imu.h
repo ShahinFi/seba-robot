@@ -87,7 +87,9 @@ bool IMU_Init(void);
 void IMU_Process(void);
 
 /*
- * Copies the most recent decoded sensor values.
+ * Copies the most recent decoded sensor values. Age fields are
+ * computed at read time from the last update received for each
+ * report type.
  */
 bool IMU_GetLatest(
     IMUData *data

@@ -10,6 +10,14 @@
 
 #define COMMAND_PROTOCOL_RECENT_IDS  16U
 
+/*
+ * Pi commands use:
+ *
+ * CMD <id> <command text>
+ *
+ * The recent-command table makes repeated command IDs
+ * idempotent when the Pi retries after a serial timeout.
+ */
 typedef struct
 {
     uint32_t command_id;
@@ -102,6 +110,10 @@ bool CommandProtocol_TryExecuteLine(
             &result
         ))
     {
+        /*
+         * Return the original ACK without executing a repeated
+         * command again.
+         */
         CommandProtocol_WriteAck(
             command_id,
             result

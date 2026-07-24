@@ -3,7 +3,7 @@
 #include "commands/system_commands.h"
 #include "communication/event_stream.h"
 #include "communication/telemetry_stream.h"
-#include "control/actuator/actuator.h"
+#include "control/actuator_control/actuator_control.h"
 #include "control/motion_control/motion_control.h"
 #include "control/state_estimation/state_estimation.h"
 #include "console/console.h"
@@ -28,6 +28,10 @@ int main(void)
     HAL_Init();
     SystemClock_Init();
 
+    /*
+     * Bring motor outputs to a known disabled state before any
+     * fallible hardware initialization can enter Error_Handler().
+     */
     Motor_Init();
     MotorTest_Init();
     Encoder_Init();
@@ -37,7 +41,7 @@ int main(void)
         Error_Handler();
     }
 
-    Actuator_Init();
+    ActuatorControl_Init();
     MotionControl_Init();
 
     /*
@@ -52,6 +56,11 @@ int main(void)
     const bool imu_initialized =
         IMU_Init();
 
+    /*
+     * The estimator is started even if IMU initialization fails.
+     * Its validity flags keep balance control disabled until IMU
+     * data is actually available.
+     */
     StateEstimation_Init();
 
     /*
@@ -61,6 +70,11 @@ int main(void)
      */
     Console_Init();
 
+    /*
+     * IMU service is interleaved with command handling so SH-2
+     * packets are drained often without delaying serial control
+     * commands.
+     */
     while (1)
     {
         ServiceIMU(

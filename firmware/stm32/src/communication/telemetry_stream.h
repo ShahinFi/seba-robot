@@ -4,6 +4,9 @@
 /*
  * Writes one complete TEL snapshot using the current robot
  * state, balance status, and actuator status.
+ *
+ * Field names are the host protocol. Numeric units match the
+ * state and status structure member names.
  */
 void TelemetryStream_WriteSnapshot(void);
 

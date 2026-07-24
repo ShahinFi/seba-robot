@@ -2,6 +2,10 @@
 
 #include "motor/motor.h"
 
+/*
+ * Manual motor bring-up state. This layer owns direct motor
+ * commands while closed-loop control is stopped.
+ */
 static int16_t left_command;
 static int16_t right_command;
 static bool drivers_enabled;

@@ -15,8 +15,8 @@ bool Serial_ReadByte(
 );
 
 /*
- * Queues diagnostic text for interrupt-driven transmit.
- * Bytes may be dropped if the TX buffer is full.
+ * Queues serial text for interrupt-driven transmit. Bytes may
+ * be dropped if the TX buffer is full.
  */
 void Serial_Write(
     const char *text

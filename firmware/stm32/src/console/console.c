@@ -8,6 +8,10 @@
 
 #define CONSOLE_LINE_LENGTH   160U
 
+/*
+ * The console accepts both plain serial commands and framed
+ * Pi commands on the same UART line parser.
+ */
 static char input_line[CONSOLE_LINE_LENGTH];
 static uint32_t input_length;
 
@@ -109,6 +113,10 @@ static void Console_ExecuteLine(
     char *line
 )
 {
+    /*
+     * Framed Pi commands own complete lines. Plain serial monitor
+     * commands fall through to the human command dispatcher.
+     */
     if (CommandProtocol_TryExecuteLine(line))
     {
         return;
