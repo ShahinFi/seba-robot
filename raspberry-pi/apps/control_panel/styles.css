@@ -1,0 +1,335 @@
+:root {
+  color-scheme: dark;
+  --bg: #0f1215;
+  --panel: #171c21;
+  --panel-strong: #1d242b;
+  --line: #2b343e;
+  --text: #edf2f7;
+  --muted: #94a3b1;
+  --accent: #3fb984;
+  --accent-strong: #2f8f66;
+  --danger: #f0525f;
+  --danger-strong: #922932;
+  --warn: #d99a26;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  background: #13181d;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #dbe3eb;
+}
+
+main {
+  display: grid;
+  grid-template-columns: minmax(320px, 520px) minmax(320px, 1fr);
+  grid-template-areas:
+    "fault fault"
+    "motion state"
+    "run events";
+  gap: 16px;
+  padding: 16px;
+}
+
+section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+button {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #222a32;
+  color: var(--text);
+  min-height: 42px;
+  padding: 9px 12px;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: #4b5967;
+}
+
+button.primary {
+  background: #1d5e45;
+  border-color: var(--accent-strong);
+}
+
+button.danger,
+button.emergency {
+  background: #6d242c;
+  border-color: var(--danger-strong);
+}
+
+button.emergency {
+  min-width: 180px;
+  min-height: 52px;
+  text-transform: uppercase;
+}
+
+button.holding {
+  background: #9c2f38;
+  border-color: var(--danger);
+}
+
+input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #10151a;
+  color: var(--text);
+  padding: 8px;
+  font: inherit;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.subline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 9px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.chip.ok {
+  color: var(--accent);
+  border-color: #2c6b50;
+}
+
+.chip.bad {
+  color: var(--danger);
+  border-color: #77303a;
+}
+
+.chip.warn {
+  color: var(--warn);
+  border-color: #745a2a;
+}
+
+.fault-banner {
+  grid-area: fault;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-color: #77303a;
+  background: #2a1519;
+}
+
+.fault-banner span {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.hidden {
+  display: none;
+}
+
+.motion-panel {
+  grid-area: motion;
+}
+
+.state-panel {
+  grid-area: state;
+}
+
+.run-panel {
+  grid-area: run;
+}
+
+.events-panel {
+  grid-area: events;
+}
+
+.joystick {
+  position: relative;
+  width: min(330px, 78vw);
+  aspect-ratio: 1;
+  margin: 4px auto 16px;
+  border: 1px solid #3a4652;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, #202931 0 10%, transparent 11%),
+    radial-gradient(circle at 50% 50%, #11171d 0 62%, #161d24 63% 100%);
+  box-shadow: inset 0 0 0 1px #0b1014;
+  touch-action: none;
+  user-select: none;
+}
+
+.joystick::before,
+.joystick::after {
+  content: "";
+  position: absolute;
+  background: #303a44;
+}
+
+.joystick::before {
+  left: 50%;
+  top: 12%;
+  width: 1px;
+  height: 76%;
+}
+
+.joystick::after {
+  left: 12%;
+  top: 50%;
+  width: 76%;
+  height: 1px;
+}
+
+.joystick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 30%;
+  aspect-ratio: 1;
+  border: 1px solid #57b589;
+  border-radius: 50%;
+  background: #2c7656;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 40%);
+  transform: translate(-50%, -50%);
+  transition: transform 120ms ease-out;
+  z-index: 1;
+}
+
+.joystick.active .joystick-knob {
+  transition: none;
+}
+
+.limits,
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.wide {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.state-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.metric {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #11171d;
+  min-height: 58px;
+  padding: 9px;
+}
+
+.metric span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+
+.metric strong {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.events {
+  height: 220px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0c1115;
+  color: #cad5df;
+  padding: 8px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 900px) {
+  header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  button.emergency {
+    width: 100%;
+  }
+
+  main {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "fault"
+      "motion"
+      "run"
+      "state"
+      "events";
+  }
+}
+
+@media (max-width: 480px) {
+  main {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  section {
+    padding: 12px;
+  }
+
+  .limits,
+  .button-grid,
+  .state-grid {
+    grid-template-columns: 1fr;
+  }
+}

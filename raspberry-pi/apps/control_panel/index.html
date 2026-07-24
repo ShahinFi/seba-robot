@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SEBA Control</title>
+  <link rel="stylesheet" href="/apps/control_panel/styles.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>SEBA Control</h1>
+      <div class="subline">
+        <span id="connection" class="chip muted">connecting</span>
+        <span id="mode" class="chip muted">stopped</span>
+        <span id="pitch_chip" class="chip muted">theta -</span>
+      </div>
+    </div>
+    <button id="emergency_stop" class="emergency">Emergency Stop</button>
+  </header>
+
+  <main>
+    <section id="fault_banner" class="fault-banner hidden">
+      <span>Fault</span>
+      <strong id="fault_text">none</strong>
+    </section>
+
+    <section class="motion-panel">
+      <h2>Motion</h2>
+      <div id="joystick" class="joystick" aria-label="Motion joystick">
+        <div id="joystick_knob" class="joystick-knob"></div>
+      </div>
+      <div class="limits">
+        <label>Drive limit [m/s]
+          <input id="drive_speed" type="number" min="0" max="2" step="0.01" value="0.1">
+        </label>
+        <label>Turn limit [rad/s]
+          <input id="turn_speed" type="number" min="0" max="6" step="0.01" value="0.6">
+        </label>
+      </div>
+      <button id="motion_stop" class="danger wide">Stop Motion</button>
+    </section>
+
+    <section class="state-panel">
+      <h2>Robot State</h2>
+      <div id="state_grid" class="state-grid"></div>
+    </section>
+
+    <section class="run-panel">
+      <h2>Run Control</h2>
+      <div class="button-grid">
+        <button id="balance_start" class="primary">Start Balance</button>
+        <button id="balance_stop">Stop Balance</button>
+        <button id="reset_stm32" class="danger">Hold Reset</button>
+      </div>
+    </section>
+
+    <section class="events-panel">
+      <h2>Events</h2>
+      <div id="events" class="events"></div>
+    </section>
+  </main>
+
+  <script src="/apps/control_panel/app.js" defer></script>
+</body>
+</html>

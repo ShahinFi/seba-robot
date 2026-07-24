@@ -1,19 +1,12 @@
 #!/usr/bin/env python3
 
-"""Run the SEBA-ROBOT tuner web server on the Raspberry Pi."""
+"""Run the SEBA-ROBOT Raspberry Pi web server."""
 
 import argparse
 import os
-import sys
 from http.server import ThreadingHTTPServer
-from pathlib import Path
 
-PROJECT_DIR = Path(__file__).resolve().parents[1]
-if str(PROJECT_DIR) not in sys.path:
-    # Allow running this file directly from the tuner directory.
-    sys.path.insert(0, str(PROJECT_DIR))
-
-from http_handler import TunerHandler
+from http_handler import RobotWebHandler
 from seba_pi.serial_link import SerialLink
 
 
@@ -23,7 +16,7 @@ DEFAULT_HTTP_PORT = 8080
 
 
 def main():
-    """Parse runtime settings and start the tuner HTTP server."""
+    """Parse runtime settings and start the shared robot HTTP server."""
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -37,20 +30,20 @@ def main():
     )
     parser.add_argument(
         "--host",
-        default=os.environ.get("SEBA_TUNER_HOST", "0.0.0.0")
+        default=os.environ.get("SEBA_WEB_HOST", "0.0.0.0")
     )
     parser.add_argument(
         "--port",
         type=int,
-        default=int(os.environ.get("SEBA_TUNER_PORT", DEFAULT_HTTP_PORT))
+        default=int(os.environ.get("SEBA_WEB_PORT", DEFAULT_HTTP_PORT))
     )
     args = parser.parse_args()
 
-    TunerHandler.link = SerialLink(args.serial, args.baud)
-    server = ThreadingHTTPServer((args.host, args.port), TunerHandler)
+    RobotWebHandler.link = SerialLink(args.serial, args.baud)
+    server = ThreadingHTTPServer((args.host, args.port), RobotWebHandler)
 
     print(
-        f"SEBA tuner serving on http://{args.host}:{args.port} "
+        f"SEBA web server listening on http://{args.host}:{args.port} "
         f"using {args.serial} @ {args.baud}"
     )
     server.serve_forever()

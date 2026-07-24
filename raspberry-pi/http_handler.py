@@ -1,4 +1,4 @@
-"""HTTP routes for the Raspberry Pi tuner app."""
+"""Shared HTTP routes for Raspberry Pi robot web apps."""
 
 import json
 import mimetypes
@@ -7,45 +7,34 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 
-STATIC_DIR = Path(__file__).with_name("static")
+ROOT_DIR = Path(__file__).resolve().parent
+APPS_DIR = ROOT_DIR / "apps"
 
 
-class TunerHandler(BaseHTTPRequestHandler):
-    """Serve tuner assets and JSON endpoints backed by a link object."""
+class RobotWebHandler(BaseHTTPRequestHandler):
+    """Serve robot web apps and JSON endpoints backed by one serial link."""
 
     link = None
 
     def do_GET(self):
         path = urlparse(self.path).path
 
-        if path == "/":
-            self._send_static_file("index.html")
+        if path in ("", "/", "/control"):
+            self._send_app_file("control_panel", "index.html")
             return
 
-        if path in ("/styles.css", "/app.js"):
-            self._send_static_file(path.lstrip("/"))
+        if path == "/tuner":
+            self._send_app_file("tuner", "index.html")
             return
+
+        if path.startswith("/apps/"):
+            parts = path.strip("/").split("/", 2)
+            if len(parts) == 3:
+                self._send_app_file(parts[1], parts[2])
+                return
 
         if path == "/api/telemetry":
-            try:
-                telemetry, line, error = self.link.snapshot()
-                if telemetry is None:
-                    raise RuntimeError(error or "telemetry unavailable")
-
-                self._send_json({
-                    "ok": True,
-                    "telemetry": telemetry,
-                    "raw": line,
-                    "stale": error is not None,
-                    "error": error,
-                    "command": self.link.command_status(),
-                    "logs": self.link.read_logs(),
-                })
-            except Exception as exc:
-                self._send_json(
-                    {"ok": False, "error": str(exc)},
-                    status=500
-                )
+            self._handle_telemetry()
             return
 
         self.send_error(404)
@@ -78,15 +67,49 @@ class TunerHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         return
 
+    def _handle_telemetry(self):
+        try:
+            telemetry, line, error = self.link.snapshot()
+            if telemetry is None:
+                raise RuntimeError(error or "telemetry unavailable")
+
+            self._send_json({
+                "ok": True,
+                "telemetry": telemetry,
+                "raw": line,
+                "stale": error is not None,
+                "error": error,
+                "command": self.link.command_status(),
+                "logs": self.link.read_logs(),
+            })
+        except Exception as exc:
+            self._send_json(
+                {"ok": False, "error": str(exc)},
+                status=500
+            )
+
     def _read_json(self):
         length = int(self.headers.get("Content-Length", "0"))
         raw = self.rfile.read(length)
         return json.loads(raw.decode("utf-8"))
 
-    def _send_static_file(self, filename):
-        """Serve a file from the tuner static asset directory."""
+    def _send_app_file(self, app_name, filename):
+        """Serve one file from a known app static directory."""
 
-        path = STATIC_DIR / filename
+        if app_name not in ("control_panel", "tuner"):
+            self.send_error(404)
+            return
+
+        root = (APPS_DIR / app_name).resolve()
+        path = (root / filename).resolve()
+
+        if (
+            root not in path.parents and
+            path != root
+        ):
+            self.send_error(404)
+            return
+
         if not path.is_file():
             self.send_error(404)
             return
