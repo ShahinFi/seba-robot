@@ -81,6 +81,8 @@ class SerialLink:
                 "next_send": 0.0,
             }
 
+            # Stop and reset commands replace queued motion/tuning commands so
+            # safety actions are not delayed behind stale browser requests.
             if text in ("balance stop", "actuator stop", "system reset"):
                 self._commands.clear()
                 self._inflight_command = command
@@ -158,6 +160,8 @@ class SerialLink:
             self._inflight_command = None
             return
 
+        # The STM32 treats repeated command IDs as idempotent, so retries can
+        # recover from lost ACK lines without executing the command twice.
         self._write_line(
             f"CMD {command['id']} {command['text']}"
         )
@@ -191,6 +195,8 @@ class SerialLink:
         self._rx_buffer.extend(raw)
 
         if len(self._rx_buffer) > RX_BUFFER_LIMIT:
+            # A missing newline or line noise must not grow memory without
+            # bound; dropping the partial line keeps the link recoverable.
             self._rx_buffer.clear()
             self._error = "serial receive line too long"
             return
@@ -213,6 +219,8 @@ class SerialLink:
             self._error = None
             return
 
+        # ACK and EVT lines are side channels. They update command/log state
+        # without replacing the latest telemetry snapshot used by the UI.
         if line.startswith("ACK "):
             self._handle_ack(line)
             return

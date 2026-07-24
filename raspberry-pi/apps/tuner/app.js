@@ -164,6 +164,10 @@ function startJoystickHold() {
     return;
   }
 
+  /*
+   * Motion commands are a heartbeat. The STM32 clears stale motion commands,
+   * so the page repeats the active joystick command while the pointer is held.
+   */
   sendJoystickCommand();
   joystickHoldTimer = window.setInterval(
     sendJoystickCommand,
@@ -191,6 +195,10 @@ function centerJoystick(sendStop) {
   document.getElementById("v_cmd").value = "0";
   document.getElementById("yaw_cmd").value = "0";
 
+  /*
+   * Releasing the joystick sends one explicit zero command before the browser
+   * stops the heartbeat.
+   */
   if (sendStop) {
     sendJoystickCommand();
   }

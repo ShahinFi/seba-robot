@@ -102,6 +102,10 @@ function startJoystickHold() {
     return;
   }
 
+  /*
+   * Motion commands are a heartbeat. The STM32 clears stale motion commands,
+   * so the page repeats the active joystick command while the pointer is held.
+   */
   sendJoystickCommand();
   joystickHoldTimer = window.setInterval(
     sendJoystickCommand,
@@ -124,6 +128,10 @@ function centerJoystick(sendStop) {
   knob.style.transform = "translate(-50%, -50%)";
   joystickCommand = {v: "0", yaw: "0"};
 
+  /*
+   * Releasing the joystick sends one explicit zero command before the browser
+   * stops the heartbeat.
+   */
   if (sendStop) {
     sendJoystickCommand();
   }
@@ -194,6 +202,10 @@ function emergencyStop() {
 function bindResetHold() {
   const button = document.getElementById("reset_stm32");
 
+  /*
+   * Reset is hold-to-confirm so a normal tap cannot reboot the STM32 while the
+   * robot is running.
+   */
   function cancelReset() {
     if (resetTimer !== null) {
       window.clearTimeout(resetTimer);
