@@ -39,6 +39,7 @@ class TunerHandler(BaseHTTPRequestHandler):
                     "stale": error is not None,
                     "error": error,
                     "command": self.link.command_status(),
+                    "logs": self.link.read_logs(),
                 })
             except Exception as exc:
                 self._send_json(
@@ -59,10 +60,11 @@ class TunerHandler(BaseHTTPRequestHandler):
         try:
             payload = self._read_json()
             command = str(payload["command"]).strip()
+            log_command = bool(payload.get("log", True))
             if not command:
                 raise ValueError("empty command")
 
-            response = self.link.send_command(command)
+            response = self.link.send_command(command, log=log_command)
             self._send_json({
                 "ok": not response.startswith("ERROR:"),
                 "response": response,

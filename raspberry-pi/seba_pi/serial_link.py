@@ -13,6 +13,7 @@ except ImportError:
 SERIAL_TIMEOUT_S = 0.02
 COMMAND_ACK_RETRY_S = 0.15
 COMMAND_MAX_ATTEMPTS = 20
+RX_BUFFER_LIMIT = 4096
 
 
 class SerialLink:
@@ -22,6 +23,7 @@ class SerialLink:
         self.port = port
         self.baud = baud
         self._serial = None
+        self._rx_buffer = bytearray()
         self._condition = threading.Condition()
         self._commands = deque()
         self._inflight_command = None
@@ -30,6 +32,7 @@ class SerialLink:
         self._telemetry_raw = ""
         self._last_telemetry_s = 0.0
         self._last_ack = ""
+        self._logs = deque(maxlen=80)
         self._error = "starting"
         self._stop = threading.Event()
         self._thread = threading.Thread(
@@ -56,6 +59,7 @@ class SerialLink:
     def send_command(
         self,
         command,
+        log=True,
     ):
         """Queue one STM32 command and return the assigned command ID."""
 
@@ -72,6 +76,7 @@ class SerialLink:
             command = {
                 "id": command_id,
                 "text": text,
+                "log": log,
                 "attempts": 0,
                 "next_send": 0.0,
             }
@@ -113,6 +118,15 @@ class SerialLink:
                 "inflight": inflight_id,
                 "queued": len(self._commands),
             }
+
+    def read_logs(self):
+        """Return and clear STM32 text lines collected since the last call."""
+
+        with self._condition:
+            logs = list(self._logs)
+            self._logs.clear()
+
+        return logs
 
     def _run(self):
         while not self._stop.is_set():
@@ -169,10 +183,25 @@ class SerialLink:
 
     def _read_stream_line(self):
         device = self._open()
-        raw = device.readline()
+        read_size = max(1, device.in_waiting)
+        raw = device.read(read_size)
         if not raw:
             return
 
+        self._rx_buffer.extend(raw)
+
+        if len(self._rx_buffer) > RX_BUFFER_LIMIT:
+            self._rx_buffer.clear()
+            self._error = "serial receive line too long"
+            return
+
+        while b"\n" in self._rx_buffer:
+            line_raw, _, remaining = self._rx_buffer.partition(b"\n")
+            self._rx_buffer = bytearray(remaining)
+
+            self._handle_stream_line(line_raw)
+
+    def _handle_stream_line(self, raw):
         line = raw.decode("utf-8", errors="replace").strip()
         if not line:
             return
@@ -186,6 +215,19 @@ class SerialLink:
 
         if line.startswith("ACK "):
             self._handle_ack(line)
+            return
+
+        if line.startswith("EVT "):
+            with self._condition:
+                self._logs.append(line)
+            return
+
+        with self._condition:
+            if (
+                self._inflight_command is None or
+                self._inflight_command["log"]
+            ):
+                self._logs.append(line)
 
     def _handle_ack(self, line):
         parts = line.split()
@@ -205,8 +247,10 @@ class SerialLink:
                 self._inflight_command is not None and
                 self._inflight_command["id"] == command_id
             ):
+                should_log = self._inflight_command["log"]
                 self._inflight_command = None
-                self._last_ack = line
+                if should_log:
+                    self._last_ack = line
 
                 if parts[2] == "OK":
                     self._error = None
@@ -220,6 +264,7 @@ class SerialLink:
             except Exception:
                 pass
             self._serial = None
+            self._rx_buffer.clear()
 
 
 def parse_telemetry(line):

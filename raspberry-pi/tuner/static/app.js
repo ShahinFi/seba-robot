@@ -22,10 +22,26 @@ let joystickCommand = {v: 0, yaw: 0};
 let joystickLastSendMs = 0;
 let joystickSendTimer = null;
 
-function log(text) {
-  const node = document.getElementById("log");
+function writeLog(nodeId, text) {
+  const node = document.getElementById(nodeId);
   const time = new Date().toLocaleTimeString();
-  node.textContent = `[${time}] ${text}\n` + node.textContent;
+  const wasAtBottom =
+    node.scrollTop + node.clientHeight >=
+    node.scrollHeight - 4;
+
+  node.textContent += `[${time}] ${text}\n`;
+
+  if (wasAtBottom) {
+    node.scrollTop = node.scrollHeight;
+  }
+}
+
+function logCommand(text) {
+  writeLog("command_log", text);
+}
+
+function logStm(text) {
+  writeLog("stm_log", text);
 }
 
 function buildReadout() {
@@ -77,14 +93,29 @@ async function api(path, options) {
   return data;
 }
 
-async function sendCommand(command) {
-  const data = await api("/api/command", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({command})
-  });
-  log(`${command} -> ${data.response || "OK"}`);
-  return data;
+async function sendCommand(command, options = {}) {
+  const shouldLog =
+    options.log !== false;
+
+  try {
+    const data = await api("/api/command", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        command,
+        log: shouldLog
+      })
+    });
+    if (shouldLog) {
+      logCommand(`${command} -> ${data.response || "OK"}`);
+    }
+    return data;
+  } catch (error) {
+    if (shouldLog) {
+      logCommand(`${command} -> ERROR: ${error.message}`);
+    }
+    throw error;
+  }
 }
 
 function sendValue(prefix, inputId) {
@@ -135,8 +166,10 @@ function sendJoystickCommand(force) {
   }
 
   joystickLastSendMs = now;
-  sendCommand(`balance command ${joystickCommand.v} ${joystickCommand.yaw}`)
-    .catch((error) => log(`joystick command failed: ${error.message}`));
+  sendCommand(
+    `balance command ${joystickCommand.v} ${joystickCommand.yaw}`,
+    {log: false}
+  ).catch(() => {});
 }
 
 function scheduleJoystickSend(deferOnly) {
@@ -240,6 +273,11 @@ function resetStm32() {
   return sendCommand("system reset");
 }
 
+function stopMotion() {
+  centerJoystick(false);
+  return sendCommand("balance command 0 0");
+}
+
 function bindControls() {
   document.getElementById("balance_start")
     .addEventListener("click", () => sendCommand("balance start"));
@@ -254,7 +292,7 @@ function bindControls() {
     .addEventListener("click", resetStm32);
 
   document.getElementById("motion_stop")
-    .addEventListener("click", () => centerJoystick(true));
+    .addEventListener("click", stopMotion);
 
   document.getElementById("apply_motion")
     .addEventListener("click", applyMotionCommand);
@@ -300,7 +338,13 @@ async function pollTelemetry() {
       data.command.ack !== lastAck
     ) {
       lastAck = data.command.ack;
-      log(`STM ${data.command.ack}`);
+      logCommand(`STM ${data.command.ack}`);
+    }
+
+    if (Array.isArray(data.logs)) {
+      for (const line of data.logs) {
+        logStm(line);
+      }
     }
 
     for (const key of metrics) {
