@@ -1,0 +1,19 @@
+[Unit]
+Description=SEBA-ROBOT Raspberry Pi web server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@REPO_DIR@/raspberry-pi
+Environment=PYTHONUNBUFFERED=1
+Environment=SEBA_SERIAL=@SERIAL_PORT@
+Environment=SEBA_WEB_HOST=0.0.0.0
+Environment=SEBA_WEB_PORT=@WEB_PORT@
+ExecStart=@PYTHON@ @REPO_DIR@/raspberry-pi/server.py
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
