@@ -19,8 +19,7 @@ const joystickDeadband = 0.05;
 const joystickSendPeriodMs = 80;
 
 let joystickCommand = {v: 0, yaw: 0};
-let joystickLastSendMs = 0;
-let joystickSendTimer = null;
+let joystickHoldTimer = null;
 
 function writeLog(nodeId, text) {
   const node = document.getElementById(nodeId);
@@ -151,44 +150,34 @@ function applyJoystickVector(x, y) {
 
   document.getElementById("v_cmd").value = v;
   document.getElementById("yaw_cmd").value = yaw;
-
-  scheduleJoystickSend(false);
 }
 
-function sendJoystickCommand(force) {
-  const now = Date.now();
-  const elapsedMs =
-    now - joystickLastSendMs;
-
-  if (!force && elapsedMs < joystickSendPeriodMs) {
-    scheduleJoystickSend(true);
-    return;
-  }
-
-  joystickLastSendMs = now;
+function sendJoystickCommand() {
   sendCommand(
     `balance command ${joystickCommand.v} ${joystickCommand.yaw}`,
     {log: false}
   ).catch(() => {});
 }
 
-function scheduleJoystickSend(deferOnly) {
-  if (!deferOnly) {
-    sendJoystickCommand(false);
+function startJoystickHold() {
+  if (joystickHoldTimer !== null) {
     return;
   }
 
-  if (joystickSendTimer !== null) {
+  sendJoystickCommand();
+  joystickHoldTimer = window.setInterval(
+    sendJoystickCommand,
+    joystickSendPeriodMs
+  );
+}
+
+function stopJoystickHold() {
+  if (joystickHoldTimer === null) {
     return;
   }
 
-  const waitMs =
-    Math.max(0, joystickSendPeriodMs - (Date.now() - joystickLastSendMs));
-
-  joystickSendTimer = window.setTimeout(() => {
-    joystickSendTimer = null;
-    sendJoystickCommand(true);
-  }, waitMs);
+  window.clearInterval(joystickHoldTimer);
+  joystickHoldTimer = null;
 }
 
 function centerJoystick(sendStop) {
@@ -203,7 +192,7 @@ function centerJoystick(sendStop) {
   document.getElementById("yaw_cmd").value = "0";
 
   if (sendStop) {
-    sendJoystickCommand(true);
+    sendJoystickCommand();
   }
 }
 
@@ -247,6 +236,7 @@ function bindJoystick() {
     base.setPointerCapture(event.pointerId);
     base.classList.add("active");
     updateJoystick(event);
+    startJoystickHold();
   });
 
   base.addEventListener("pointermove", (event) => {
@@ -264,6 +254,7 @@ function bindJoystick() {
       }
 
       base.classList.remove("active");
+      stopJoystickHold();
       centerJoystick(true);
     });
   }
