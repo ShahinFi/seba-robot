@@ -17,6 +17,9 @@ typedef struct
     uint32_t encoder_counts_per_wheel_rev;
     uint32_t state_estimator_rate_hz;
     uint32_t motion_controller_rate_hz;
+    uint32_t imu_orientation_timeout_ms;
+    uint32_t imu_gyroscope_timeout_ms;
+    uint32_t motion_command_timeout_ms;
     float velocity_filter_cutoff_hz;
     float derivative_filter_cutoff_hz;
     float max_wheel_torque_mnm;

@@ -19,8 +19,16 @@ typedef struct
 
 static ControlParameters parameters;
 static MotionControlStatus status;
+static uint32_t last_command_ms;
 
 static void MotionControl_ResetControllerState(void);
+static void MotionControl_ResetCommandState(void);
+static void MotionControl_ClearFaultState(void);
+static void MotionControl_EnterFault(
+    MotionControlFault fault
+);
+static void MotionControl_UpdateCommandAge(void);
+static void MotionControl_ApplyCommandWatchdog(void);
 
 static float MotionControl_Clamp(
     float value,
@@ -51,13 +59,14 @@ void MotionControl_Init(void)
     status.fault_active = false;
     status.state_invalid = false;
     status.fall_detected = false;
-    status.forward_velocity_command_mps = 0.0F;
-    status.yaw_rate_command_rads = 0.0F;
+    status.fault =
+        MOTION_CONTROL_FAULT_NONE;
     status.max_wheel_torque_mnm =
         parameters.max_wheel_torque_mnm;
     status.motion_gain_scale =
         parameters.motion_gain_scale;
 
+    MotionControl_ResetCommandState();
     MotionControl_ResetControllerState();
 }
 
@@ -67,10 +76,9 @@ void MotionControl_Enable(void)
         MotionControl_EnterCritical();
 
     status.enabled = false;
+    MotionControl_ResetCommandState();
     MotionControl_ResetControllerState();
-    status.fault_active = false;
-    status.state_invalid = false;
-    status.fall_detected = false;
+    MotionControl_ClearFaultState();
 
     MotionControl_ExitCritical(
         interrupt_state
@@ -95,7 +103,9 @@ void MotionControl_Disable(void)
 
     status.enabled = false;
 
+    MotionControl_ResetCommandState();
     MotionControl_ResetControllerState();
+    MotionControl_ClearFaultState();
 
     MotionControl_ExitCritical(
         interrupt_state
@@ -189,6 +199,8 @@ bool MotionControl_SetCommand(
     float yaw_rate_command_rads
 )
 {
+    const uint32_t now_ms =
+        HAL_GetTick();
     const uint32_t interrupt_state =
         MotionControl_EnterCritical();
 
@@ -197,6 +209,11 @@ bool MotionControl_SetCommand(
 
     status.yaw_rate_command_rads =
         yaw_rate_command_rads;
+
+    status.command_update_count++;
+    status.command_age_ms = 0U;
+    last_command_ms =
+        now_ms;
 
     MotionControl_ExitCritical(
         interrupt_state
@@ -247,14 +264,29 @@ void MotionControl_Update(
         return;
     }
 
+    MotionControl_ApplyCommandWatchdog();
+
     if (
         state == NULL ||
         !state->valid
     )
     {
-        status.state_invalid = true;
-        status.fault_active = true;
-        MotionControl_Disable();
+        if (
+            state != NULL &&
+            state->imu_stale
+        )
+        {
+            MotionControl_EnterFault(
+                MOTION_CONTROL_FAULT_IMU_STALE
+            );
+        }
+        else
+        {
+            MotionControl_EnterFault(
+                MOTION_CONTROL_FAULT_STATE_INVALID
+            );
+        }
+
         return;
     }
 
@@ -265,9 +297,9 @@ void MotionControl_Update(
         -parameters.fall_angle_rad
     )
     {
-        status.fall_detected = true;
-        status.fault_active = true;
-        MotionControl_Disable();
+        MotionControl_EnterFault(
+            MOTION_CONTROL_FAULT_FALL
+        );
         return;
     }
 
@@ -338,8 +370,9 @@ void MotionControl_Update(
             )
         ))
     {
-        status.fault_active = true;
-        MotionControl_Disable();
+        MotionControl_EnterFault(
+            MOTION_CONTROL_FAULT_ACTUATOR
+        );
     }
 }
 
@@ -355,6 +388,8 @@ void MotionControl_GetStatus(
     const uint32_t interrupt_state =
         MotionControl_EnterCritical();
 
+    MotionControl_UpdateCommandAge();
+
     *output = status;
 
     MotionControl_ExitCritical(
@@ -368,6 +403,79 @@ static void MotionControl_ResetControllerState(void)
     status.right_torque_command_mnm = 0.0F;
     status.left_torque_rate_mnm_s = 0.0F;
     status.right_torque_rate_mnm_s = 0.0F;
+}
+
+static void MotionControl_ResetCommandState(void)
+{
+    status.forward_velocity_command_mps = 0.0F;
+    status.yaw_rate_command_rads = 0.0F;
+    status.command_age_ms = 0U;
+    last_command_ms =
+        HAL_GetTick();
+}
+
+static void MotionControl_UpdateCommandAge(void)
+{
+    status.command_age_ms =
+        HAL_GetTick() -
+        last_command_ms;
+}
+
+static void MotionControl_ApplyCommandWatchdog(void)
+{
+    const uint32_t interrupt_state =
+        MotionControl_EnterCritical();
+
+    MotionControl_UpdateCommandAge();
+
+    if (
+        status.command_age_ms >
+        parameters.motion_command_timeout_ms
+    )
+    {
+        status.forward_velocity_command_mps = 0.0F;
+        status.yaw_rate_command_rads = 0.0F;
+    }
+
+    MotionControl_ExitCritical(
+        interrupt_state
+    );
+}
+
+static void MotionControl_ClearFaultState(void)
+{
+    status.fault_active = false;
+    status.state_invalid = false;
+    status.fall_detected = false;
+    status.fault =
+        MOTION_CONTROL_FAULT_NONE;
+}
+
+static void MotionControl_EnterFault(
+    MotionControlFault fault
+)
+{
+    const uint32_t interrupt_state =
+        MotionControl_EnterCritical();
+
+    status.enabled = false;
+    status.fault_active = true;
+    status.state_invalid =
+        fault == MOTION_CONTROL_FAULT_STATE_INVALID ||
+        fault == MOTION_CONTROL_FAULT_IMU_STALE;
+    status.fall_detected =
+        fault == MOTION_CONTROL_FAULT_FALL;
+    status.fault =
+        fault;
+
+    MotionControl_ResetCommandState();
+    MotionControl_ResetControllerState();
+
+    MotionControl_ExitCritical(
+        interrupt_state
+    );
+
+    Actuator_Disable();
 }
 
 static float MotionControl_Clamp(

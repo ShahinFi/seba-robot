@@ -77,8 +77,13 @@ void StateEstimation_Init(void)
 
     state.valid = false;
     state.imu_valid = false;
+    state.imu_stale = false;
     state.encoder_valid = false;
     state.update_count = 0U;
+    state.orientation_update_count = 0U;
+    state.gyroscope_update_count = 0U;
+    state.orientation_age_ms = UINT32_MAX;
+    state.gyroscope_age_ms = UINT32_MAX;
     state.forward_velocity_mps = 0.0F;
     state.pitch_rad = 0.0F;
     state.pitch_rate_rads = 0.0F;
@@ -153,6 +158,10 @@ static void StateEstimation_Update(void)
     float raw_forward_acceleration_mps2;
     float raw_pitch_acceleration_rads2;
     float raw_yaw_acceleration_rads2;
+    bool imu_available;
+    bool orientation_fresh;
+    bool gyroscope_fresh;
+    bool imu_valid;
     const float sample_period_s =
         1.0F /
         (float)parameters.state_estimator_rate_hz;
@@ -164,12 +173,26 @@ static void StateEstimation_Update(void)
         ) /
         (float)parameters.encoder_counts_per_wheel_rev;
 
-    const bool imu_valid =
+    imu_available =
         IMU_GetLatest(
             &imu
-        ) &&
+        );
+
+    orientation_fresh =
+        imu_available &&
         imu.orientation_valid &&
-        imu.gyroscope_valid;
+        imu.orientation_age_ms <=
+        parameters.imu_orientation_timeout_ms;
+
+    gyroscope_fresh =
+        imu_available &&
+        imu.gyroscope_valid &&
+        imu.gyroscope_age_ms <=
+        parameters.imu_gyroscope_timeout_ms;
+
+    imu_valid =
+        orientation_fresh &&
+        gyroscope_fresh;
 
     Encoder_Update();
 
@@ -237,6 +260,39 @@ static void StateEstimation_Update(void)
 
     previous_forward_velocity_mps =
         state.forward_velocity_mps;
+
+    state.orientation_update_count =
+        imu_available
+            ? imu.orientation_update_count
+            : 0U;
+
+    state.gyroscope_update_count =
+        imu_available
+            ? imu.gyroscope_update_count
+            : 0U;
+
+    state.orientation_age_ms =
+        imu_available
+            ? imu.orientation_age_ms
+            : UINT32_MAX;
+
+    state.gyroscope_age_ms =
+        imu_available
+            ? imu.gyroscope_age_ms
+            : UINT32_MAX;
+
+    state.imu_stale =
+        imu_available &&
+        (
+            (
+                imu.orientation_valid &&
+                !orientation_fresh
+            ) ||
+            (
+                imu.gyroscope_valid &&
+                !gyroscope_fresh
+            )
+        );
 
     if (imu_valid)
     {

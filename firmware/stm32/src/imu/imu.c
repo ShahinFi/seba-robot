@@ -49,6 +49,10 @@
 
 static IMUData latest_data;
 
+static uint32_t acceleration_update_ms;
+static uint32_t gyroscope_update_ms;
+static uint32_t orientation_update_ms;
+
 static bool imu_ready;
 static bool imu_reset_detected;
 
@@ -180,6 +184,10 @@ bool IMU_GetLatest(
 )
 {
     uint32_t interrupt_state;
+    uint32_t now_ms;
+    uint32_t copied_acceleration_update_ms;
+    uint32_t copied_gyroscope_update_ms;
+    uint32_t copied_orientation_update_ms;
 
     if (data == NULL)
     {
@@ -195,10 +203,34 @@ bool IMU_GetLatest(
         IMU_EnterCritical();
 
     *data = latest_data;
+    copied_acceleration_update_ms =
+        acceleration_update_ms;
+    copied_gyroscope_update_ms =
+        gyroscope_update_ms;
+    copied_orientation_update_ms =
+        orientation_update_ms;
 
     IMU_ExitCritical(
         interrupt_state
     );
+
+    now_ms =
+        HAL_GetTick();
+
+    data->acceleration_age_ms =
+        data->acceleration_valid
+            ? now_ms - copied_acceleration_update_ms
+            : UINT32_MAX;
+
+    data->gyroscope_age_ms =
+        data->gyroscope_valid
+            ? now_ms - copied_gyroscope_update_ms
+            : UINT32_MAX;
+
+    data->orientation_age_ms =
+        data->orientation_valid
+            ? now_ms - copied_orientation_update_ms
+            : UINT32_MAX;
 
     return true;
 }
@@ -285,6 +317,10 @@ static void IMU_SensorCallback(
             latest_data.acceleration_timestamp_us =
                 value.timestamp;
 
+            latest_data.acceleration_update_count++;
+            acceleration_update_ms =
+                HAL_GetTick();
+
             latest_data.acceleration_valid = true;
 
             IMU_ExitCritical(
@@ -329,6 +365,10 @@ static void IMU_SensorCallback(
 
             latest_data.gyroscope_timestamp_us =
                 value.timestamp;
+
+            latest_data.gyroscope_update_count++;
+            gyroscope_update_ms =
+                HAL_GetTick();
 
             latest_data.gyroscope_valid = true;
 
@@ -405,6 +445,10 @@ static void IMU_SensorCallback(
             latest_data.orientation_timestamp_us =
                 value.timestamp;
 
+            latest_data.orientation_update_count++;
+            orientation_update_ms =
+                HAL_GetTick();
+
             latest_data.orientation_valid = true;
 
             IMU_ExitCritical(
@@ -474,6 +518,10 @@ static void IMU_ClearData(void)
         0,
         sizeof(latest_data)
     );
+
+    acceleration_update_ms = 0U;
+    gyroscope_update_ms = 0U;
+    orientation_update_ms = 0U;
 
     IMU_ExitCritical(
         interrupt_state

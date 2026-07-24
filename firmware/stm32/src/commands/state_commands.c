@@ -42,11 +42,30 @@ static void StateCommands_Print(void)
     Serial_Write(" imu=");
     Serial_Write(state.imu_valid ? "yes" : "no");
 
+    Serial_Write(" imu_stale=");
+    Serial_Write(state.imu_stale ? "yes" : "no");
+
     Serial_Write(" encoder=");
     Serial_Write(state.encoder_valid ? "yes" : "no");
 
     Serial_Write(" updates=");
     Serial_WriteUInt32(state.update_count);
+    Serial_WriteLine("");
+
+    Serial_Write("  Orientation age [ms]: ");
+    Serial_WriteUInt32(state.orientation_age_ms);
+    Serial_WriteLine("");
+
+    Serial_Write("  Gyroscope age [ms]: ");
+    Serial_WriteUInt32(state.gyroscope_age_ms);
+    Serial_WriteLine("");
+
+    Serial_Write("  Orientation updates: ");
+    Serial_WriteUInt32(state.orientation_update_count);
+    Serial_WriteLine("");
+
+    Serial_Write("  Gyroscope updates: ");
+    Serial_WriteUInt32(state.gyroscope_update_count);
     Serial_WriteLine("");
 
     Serial_Write("  v [m/s]: ");

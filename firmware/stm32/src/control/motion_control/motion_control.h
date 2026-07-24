@@ -6,12 +6,24 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+typedef enum
+{
+    MOTION_CONTROL_FAULT_NONE = 0,
+    MOTION_CONTROL_FAULT_STATE_INVALID,
+    MOTION_CONTROL_FAULT_IMU_STALE,
+    MOTION_CONTROL_FAULT_FALL,
+    MOTION_CONTROL_FAULT_ACTUATOR
+} MotionControlFault;
+
 typedef struct
 {
     bool enabled;
     bool fault_active;
     bool state_invalid;
     bool fall_detected;
+    MotionControlFault fault;
+    uint32_t command_age_ms;
+    uint32_t command_update_count;
     float forward_velocity_command_mps;
     float yaw_rate_command_rads;
     float left_torque_command_mnm;

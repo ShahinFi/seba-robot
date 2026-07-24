@@ -5,6 +5,10 @@
 
 const metrics = [
   "valid", "balance", "fault", "fall",
+  "fault_code", "fault_name",
+  "cmd_age", "cmd_count",
+  "imu", "imu_stale", "ori_age", "gyro_age",
+  "ori_count", "gyro_count",
   "theta", "theta_dot", "theta_ddot", "v",
   "left_T", "right_T", "left_dT", "right_dT",
   "left_ref", "right_ref", "left_meas", "right_meas",

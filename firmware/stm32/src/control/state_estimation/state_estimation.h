@@ -8,8 +8,13 @@ typedef struct
 {
     bool valid;
     bool imu_valid;
+    bool imu_stale;
     bool encoder_valid;
     uint32_t update_count;
+    uint32_t orientation_update_count;
+    uint32_t gyroscope_update_count;
+    uint32_t orientation_age_ms;
+    uint32_t gyroscope_age_ms;
     float forward_velocity_mps;
     float pitch_rad;
     float pitch_rate_rads;

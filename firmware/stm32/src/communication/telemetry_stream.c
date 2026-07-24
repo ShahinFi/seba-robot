@@ -5,6 +5,10 @@
 #include "control/state_estimation/state_estimation.h"
 #include "serial/serial.h"
 
+static const char *TelemetryStream_MotionFaultName(
+    MotionControlFault fault
+);
+
 void TelemetryStream_WriteSnapshot(void)
 {
     RobotState state;
@@ -29,11 +33,26 @@ void TelemetryStream_WriteSnapshot(void)
     Serial_Write(" imu=");
     Serial_Write(state.imu_valid ? "1" : "0");
 
+    Serial_Write(" imu_stale=");
+    Serial_Write(state.imu_stale ? "1" : "0");
+
     Serial_Write(" enc=");
     Serial_Write(state.encoder_valid ? "1" : "0");
 
     Serial_Write(" updates=");
     Serial_WriteUInt32(state.update_count);
+
+    Serial_Write(" ori_age=");
+    Serial_WriteUInt32(state.orientation_age_ms);
+
+    Serial_Write(" gyro_age=");
+    Serial_WriteUInt32(state.gyroscope_age_ms);
+
+    Serial_Write(" ori_count=");
+    Serial_WriteUInt32(state.orientation_update_count);
+
+    Serial_Write(" gyro_count=");
+    Serial_WriteUInt32(state.gyroscope_update_count);
 
     Serial_Write(" v=");
     Serial_WriteFloat3(state.forward_velocity_mps);
@@ -61,6 +80,20 @@ void TelemetryStream_WriteSnapshot(void)
 
     Serial_Write(" fault=");
     Serial_Write(balance.fault_active ? "1" : "0");
+
+    Serial_Write(" fault_code=");
+    Serial_WriteUInt32((uint32_t)balance.fault);
+
+    Serial_Write(" fault_name=");
+    Serial_Write(
+        TelemetryStream_MotionFaultName(balance.fault)
+    );
+
+    Serial_Write(" cmd_age=");
+    Serial_WriteUInt32(balance.command_age_ms);
+
+    Serial_Write(" cmd_count=");
+    Serial_WriteUInt32(balance.command_update_count);
 
     Serial_Write(" fall=");
     Serial_Write(balance.fall_detected ? "1" : "0");
@@ -111,4 +144,30 @@ void TelemetryStream_WriteSnapshot(void)
     Serial_WriteInt32(actuator.right_command_permille);
 
     Serial_WriteLine("");
+}
+
+static const char *TelemetryStream_MotionFaultName(
+    MotionControlFault fault
+)
+{
+    switch (fault)
+    {
+        case MOTION_CONTROL_FAULT_NONE:
+            return "none";
+
+        case MOTION_CONTROL_FAULT_STATE_INVALID:
+            return "state_invalid";
+
+        case MOTION_CONTROL_FAULT_IMU_STALE:
+            return "imu_stale";
+
+        case MOTION_CONTROL_FAULT_FALL:
+            return "fall";
+
+        case MOTION_CONTROL_FAULT_ACTUATOR:
+            return "actuator";
+
+        default:
+            return "unknown";
+    }
 }

@@ -65,6 +65,14 @@ typedef struct
     uint64_t gyroscope_timestamp_us;
     uint64_t orientation_timestamp_us;
 
+    uint32_t acceleration_update_count;
+    uint32_t gyroscope_update_count;
+    uint32_t orientation_update_count;
+
+    uint32_t acceleration_age_ms;
+    uint32_t gyroscope_age_ms;
+    uint32_t orientation_age_ms;
+
     bool acceleration_valid;
     bool gyroscope_valid;
     bool orientation_valid;

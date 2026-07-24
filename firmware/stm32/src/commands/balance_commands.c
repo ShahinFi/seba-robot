@@ -8,6 +8,9 @@
 #include <string.h>
 
 static void BalanceCommands_PrintStatus(void);
+static const char *BalanceCommands_FaultName(
+    MotionControlFault fault
+);
 
 CommandResult BalanceCommands_Handle(
     int argument_count,
@@ -243,6 +246,20 @@ static void BalanceCommands_PrintStatus(void)
     Serial_Write(" fault=");
     Serial_Write(status.fault_active ? "ACTIVE" : "normal");
 
+    Serial_Write(" fault_code=");
+    Serial_WriteUInt32((uint32_t)status.fault);
+
+    Serial_Write(" fault_name=");
+    Serial_Write(
+        BalanceCommands_FaultName(status.fault)
+    );
+
+    Serial_Write(" cmd_age=");
+    Serial_WriteUInt32(status.command_age_ms);
+
+    Serial_Write(" cmd_count=");
+    Serial_WriteUInt32(status.command_update_count);
+
     Serial_Write(" state_invalid=");
     Serial_Write(status.state_invalid ? "yes" : "no");
 
@@ -274,4 +291,30 @@ static void BalanceCommands_PrintStatus(void)
     Serial_WriteFloat3(status.motion_gain_scale);
 
     Serial_WriteLine("");
+}
+
+static const char *BalanceCommands_FaultName(
+    MotionControlFault fault
+)
+{
+    switch (fault)
+    {
+        case MOTION_CONTROL_FAULT_NONE:
+            return "none";
+
+        case MOTION_CONTROL_FAULT_STATE_INVALID:
+            return "state_invalid";
+
+        case MOTION_CONTROL_FAULT_IMU_STALE:
+            return "imu_stale";
+
+        case MOTION_CONTROL_FAULT_FALL:
+            return "fall";
+
+        case MOTION_CONTROL_FAULT_ACTUATOR:
+            return "actuator";
+
+        default:
+            return "unknown";
+    }
 }
