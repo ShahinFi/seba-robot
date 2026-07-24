@@ -22,6 +22,20 @@
           <button id="actuator_stop" class="danger">Stop Actuator</button>
           <button id="system_reset" class="danger">Reset STM32</button>
         </div>
+        <div class="command-panel">
+          <div id="joystick" class="joystick" aria-label="Motion joystick">
+            <div id="joystick_knob" class="joystick-knob"></div>
+          </div>
+          <div class="grid">
+            <label>Drive speed [m/s]
+              <input id="drive_speed" type="number" min="0" max="2" step="0.01" value="0.1">
+            </label>
+            <label>Turn speed [rad/s]
+              <input id="turn_speed" type="number" min="0" max="6" step="0.01" value="0.6">
+            </label>
+          </div>
+          <button id="motion_stop" class="danger full">Stop Motion</button>
+        </div>
       </section>
 
       <section>

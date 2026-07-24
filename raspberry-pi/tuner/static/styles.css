@@ -122,6 +122,73 @@ button.danger {
   gap: 8px;
 }
 
+.command-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.joystick {
+  position: relative;
+  width: min(260px, 72vw);
+  aspect-ratio: 1;
+  margin: 2px auto 0;
+  border: 1px solid #36414d;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, #1c242c 0 11%, transparent 12%),
+    radial-gradient(circle at 50% 50%, #11171d 0 62%, #151b22 63% 100%);
+  box-shadow: inset 0 0 0 1px #0d1116;
+  touch-action: none;
+  user-select: none;
+}
+
+.joystick::before,
+.joystick::after {
+  content: "";
+  position: absolute;
+  background: #2b333d;
+  opacity: 0.85;
+}
+
+.joystick::before {
+  left: 50%;
+  top: 13%;
+  width: 1px;
+  height: 74%;
+}
+
+.joystick::after {
+  left: 13%;
+  top: 50%;
+  width: 74%;
+  height: 1px;
+}
+
+.joystick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 30%;
+  aspect-ratio: 1;
+  border: 1px solid #4ea77d;
+  border-radius: 50%;
+  background: #276c50;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 35%);
+  transform: translate(-50%, -50%);
+  transition: transform 120ms ease-out;
+  z-index: 1;
+}
+
+.joystick.active .joystick-knob {
+  transition: none;
+}
+
+#motion_stop {
+  min-height: 42px;
+  font-weight: 650;
+}
+
 .status {
   color: var(--muted);
   font-size: 13px;
@@ -198,5 +265,9 @@ button.danger {
 
   .readout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .joystick {
+    width: min(240px, 78vw);
   }
 }

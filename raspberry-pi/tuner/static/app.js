@@ -15,6 +15,13 @@ const metrics = [
   "left_pwm", "right_pwm", "gain", "max_T"
 ];
 
+const joystickDeadband = 0.05;
+const joystickSendPeriodMs = 80;
+
+let joystickCommand = {v: 0, yaw: 0};
+let joystickLastSendMs = 0;
+let joystickSendTimer = null;
+
 function log(text) {
   const node = document.getElementById("log");
   const time = new Date().toLocaleTimeString();
@@ -91,6 +98,144 @@ function applyMotionCommand() {
   return sendCommand(`balance command ${v} ${yaw}`);
 }
 
+function formatCommandValue(value) {
+  if (Math.abs(value) < 0.0005) {
+    return "0";
+  }
+
+  return value.toFixed(3);
+}
+
+function applyJoystickVector(x, y) {
+  const driveSpeed =
+    Number(document.getElementById("drive_speed").value) || 0;
+  const turnSpeed =
+    Number(document.getElementById("turn_speed").value) || 0;
+  const v =
+    formatCommandValue(-y * driveSpeed);
+  const yaw =
+    formatCommandValue(-x * turnSpeed);
+
+  joystickCommand = {v, yaw};
+
+  document.getElementById("v_cmd").value = v;
+  document.getElementById("yaw_cmd").value = yaw;
+
+  scheduleJoystickSend(false);
+}
+
+function sendJoystickCommand(force) {
+  const now = Date.now();
+  const elapsedMs =
+    now - joystickLastSendMs;
+
+  if (!force && elapsedMs < joystickSendPeriodMs) {
+    scheduleJoystickSend(true);
+    return;
+  }
+
+  joystickLastSendMs = now;
+  sendCommand(`balance command ${joystickCommand.v} ${joystickCommand.yaw}`)
+    .catch((error) => log(`joystick command failed: ${error.message}`));
+}
+
+function scheduleJoystickSend(deferOnly) {
+  if (!deferOnly) {
+    sendJoystickCommand(false);
+    return;
+  }
+
+  if (joystickSendTimer !== null) {
+    return;
+  }
+
+  const waitMs =
+    Math.max(0, joystickSendPeriodMs - (Date.now() - joystickLastSendMs));
+
+  joystickSendTimer = window.setTimeout(() => {
+    joystickSendTimer = null;
+    sendJoystickCommand(true);
+  }, waitMs);
+}
+
+function centerJoystick(sendStop) {
+  const knob =
+    document.getElementById("joystick_knob");
+
+  knob.style.transform =
+    "translate(-50%, -50%)";
+
+  joystickCommand = {v: "0", yaw: "0"};
+  document.getElementById("v_cmd").value = "0";
+  document.getElementById("yaw_cmd").value = "0";
+
+  if (sendStop) {
+    sendJoystickCommand(true);
+  }
+}
+
+function updateJoystick(pointerEvent) {
+  const base =
+    document.getElementById("joystick");
+  const knob =
+    document.getElementById("joystick_knob");
+  const rect =
+    base.getBoundingClientRect();
+  const radius =
+    rect.width / 2;
+  let x =
+    (pointerEvent.clientX - rect.left - radius) / radius;
+  let y =
+    (pointerEvent.clientY - rect.top - radius) / radius;
+  const magnitude =
+    Math.hypot(x, y);
+
+  if (magnitude > 1) {
+    x /= magnitude;
+    y /= magnitude;
+  }
+
+  if (Math.hypot(x, y) < joystickDeadband) {
+    x = 0;
+    y = 0;
+  }
+
+  knob.style.transform =
+    `translate(calc(-50% + ${x * radius}px), calc(-50% + ${y * radius}px))`;
+
+  applyJoystickVector(x, y);
+}
+
+function bindJoystick() {
+  const base =
+    document.getElementById("joystick");
+
+  base.addEventListener("pointerdown", (event) => {
+    base.setPointerCapture(event.pointerId);
+    base.classList.add("active");
+    updateJoystick(event);
+  });
+
+  base.addEventListener("pointermove", (event) => {
+    if (!base.hasPointerCapture(event.pointerId)) {
+      return;
+    }
+
+    updateJoystick(event);
+  });
+
+  for (const eventName of ["pointerup", "pointercancel"]) {
+    base.addEventListener(eventName, (event) => {
+      if (base.hasPointerCapture(event.pointerId)) {
+        base.releasePointerCapture(event.pointerId);
+      }
+
+      base.classList.remove("active");
+      centerJoystick(true);
+    });
+  }
+}
+
 function resetStm32() {
   return sendCommand("system reset");
 }
@@ -107,6 +252,9 @@ function bindControls() {
 
   document.getElementById("system_reset")
     .addEventListener("click", resetStm32);
+
+  document.getElementById("motion_stop")
+    .addEventListener("click", () => centerJoystick(true));
 
   document.getElementById("apply_motion")
     .addEventListener("click", applyMotionCommand);
@@ -175,6 +323,8 @@ async function pollTelemetry() {
 
 buildReadout();
 buildGainMatrix();
+bindJoystick();
 bindControls();
+centerJoystick(false);
 pollTelemetry();
 setInterval(pollTelemetry, 300);
