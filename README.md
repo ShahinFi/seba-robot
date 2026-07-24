@@ -2,19 +2,20 @@
 
 SEBA-ROBOT is a two-wheeled self-balancing robot project for control, embedded systems, and autonomous robotics development.
 
-The current work covers the robot dynamics, balance and motion control, nonlinear simulation, physical hardware, and STM32 firmware bring-up.
+The current work covers the robot dynamics, balance and motion control, nonlinear simulation, built physical hardware, STM32 real-time firmware, and Raspberry Pi web control software.
 
 ---
 
 ## Current Implementation
 
-The implemented work covers five main areas:
+The implemented work covers six main areas:
 
 - **Robot modeling:** nonlinear forward, pitch, and yaw dynamics, together with a reduced model and linearization for control design
 - **Motion control:** a robust servomechanism LQR controller for pitch stabilization, forward-velocity tracking, and yaw-rate tracking
 - **Simulation and evaluation:** a nonlinear Simulink and Simscape Multibody model with four documented test cases, result plots, and animations
 - **Hardware system:** built physical robot hardware, including power distribution, STM32 connections, motor driver, sensors, wiring, and mechanical electronics layout
-- **STM32 firmware:** PlatformIO firmware for hardware bring-up, motor control, encoder reading, IMU acquisition, current sensing, and serial console commands
+- **STM32 firmware:** real-time PlatformIO firmware for state estimation, balance and motion control, actuator current control, telemetry, safety handling, motor control, encoder reading, IMU acquisition, and current sensing
+- **Raspberry Pi software:** Python web server with an operator control panel, engineering tuner, STM32 UART communication, telemetry display, command handling, and autostart service
 
 ---
 
@@ -40,9 +41,15 @@ Electrical hardware, power distribution, STM32 connections, motor driver, sensor
 
 ### STM32 Firmware
 
-[**STM32 Firmware**](firmware/stm32)
+[**STM32 Firmware**](firmware/stm32/README.md)
 
-PlatformIO firmware for STM32G474RE hardware bring-up and low-level robot I/O.
+Real-time PlatformIO firmware for STM32G474RE sensing, state estimation, balance and motion control, actuator control, telemetry, serial commands, and safety behavior.
+
+### Raspberry Pi Software
+
+[**Raspberry Pi Software**](raspberry-pi/README.md)
+
+Python web server, operator control panel, engineering tuner, STM32 UART communication, telemetry, command handling, and autostart service.
 
 ---
 
@@ -76,12 +83,19 @@ seba-robot/
 |       |-- seba_control.slx
 |       `-- results/
 |-- docs/
-|-- firmware/
-|   `-- stm32/
-|       |-- platformio.ini
-|       `-- src/
 |-- hardware/
 |   `-- README.md
+|-- firmware/
+|   `-- stm32/
+|       |-- README.md
+|       |-- platformio.ini
+|       `-- src/
+|-- raspberry-pi/
+|   |-- README.md
+|   |-- apps/
+|   |-- seba_pi/
+|   |-- systemd/
+|   `-- server.py
 |-- LICENSE
 `-- README.md
 ```
@@ -89,8 +103,9 @@ seba-robot/
 - `control/` contains the robot dynamics and controller documentation.
 - `control/simulink/` contains the simulation model, simulation documentation, and test results.
 - `docs/` contains supporting project documents.
-- `firmware/stm32/` contains the STM32G474RE PlatformIO firmware.
 - `hardware/` contains documentation for the built robot hardware, including electronics, wiring, power distribution, and physical construction.
+- `firmware/stm32/` contains the STM32G474RE PlatformIO firmware.
+- `raspberry-pi/` contains the Raspberry Pi web server, operator control panel, engineering tuner, serial-link backend, and systemd autostart service.
 
 ---
 
@@ -126,17 +141,31 @@ cd firmware/stm32
 pio run
 ```
 
+See the [STM32 firmware documentation](firmware/stm32/README.md) for upload, monitor, serial commands, telemetry, control modules, and safety behavior.
+
+---
+
+## Running the Raspberry Pi Software
+
+The Raspberry Pi software provides the robot web interfaces.
+
+```bash
+python3 raspberry-pi/server.py --serial /dev/ttyAMA0 --port 8080
+```
+
+The operator control panel is available at `/control`, and the engineering tuner is available at `/tuner`.
+
+See the [Raspberry Pi software documentation](raspberry-pi/README.md) for setup, web addresses, serial configuration, and autostart service installation.
+
 ---
 
 ## Planned Work
 
 Future development will focus on:
 
-- closed-loop embedded balance and motion control on the physical robot
-- motor-current regulation and actuator-control validation
-- encoder and IMU state estimation
-- physical validation of the balance and motion controller
+- battery and power-status reporting
 - localization, mapping, UWB positioning, and navigation
+- ROS 2 and high-level autonomous behavior on the Raspberry Pi
 
 ---
 
