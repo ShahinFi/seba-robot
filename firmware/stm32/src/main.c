@@ -1,6 +1,7 @@
 #include "stm32g4xx_hal.h"
 
 #include "commands/system_commands.h"
+#include "communication/event_stream.h"
 #include "communication/telemetry_stream.h"
 #include "control/actuator/actuator.h"
 #include "control/motion_control/motion_control.h"
@@ -14,6 +15,9 @@
 #include "tests/motor_test.h"
 
 static void SystemClock_Init(void);
+static void ServiceIMU(
+    bool imu_initialized
+);
 static void StreamTelemetry(void);
 static void Error_Handler(void);
 
@@ -59,17 +63,36 @@ int main(void)
 
     while (1)
     {
-        Console_Process();
-        SystemCommands_ProcessResetRequest();
-
-        if (imu_initialized)
-        {
-            IMU_Process();
-        }
+        ServiceIMU(
+            imu_initialized
+        );
 
         Console_Process();
         SystemCommands_ProcessResetRequest();
+
+        ServiceIMU(
+            imu_initialized
+        );
+
+        Console_Process();
+        SystemCommands_ProcessResetRequest();
+
+        ServiceIMU(
+            imu_initialized
+        );
+
+        EventStream_Update();
         StreamTelemetry();
+    }
+}
+
+static void ServiceIMU(
+    bool imu_initialized
+)
+{
+    if (imu_initialized)
+    {
+        IMU_Process();
     }
 }
 

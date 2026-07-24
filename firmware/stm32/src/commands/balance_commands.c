@@ -1,6 +1,9 @@
 #include "balance_commands.h"
 #include "command_parser.h"
+#include "communication/state_event_format.h"
+#include "control/control_parameters.h"
 #include "control/motion_control/motion_control.h"
+#include "control/state_estimation/state_estimation.h"
 #include "serial/serial.h"
 #include "tests/motor_test.h"
 
@@ -8,8 +11,14 @@
 #include <string.h>
 
 static void BalanceCommands_PrintStatus(void);
-static const char *BalanceCommands_FaultName(
-    MotionControlFault fault
+static bool BalanceCommands_StateAllowsStart(
+    const RobotState *state,
+    const ControlParameters *parameters
+);
+static void BalanceCommands_PrintArmEvent(
+    const char *result,
+    const char *reason,
+    const RobotState *state
 );
 
 CommandResult BalanceCommands_Handle(
@@ -198,8 +207,48 @@ CommandResult BalanceCommands_Handle(
 
     if (strcmp(arguments[1], "start") == 0)
     {
+        ControlParameters parameters;
+        RobotState state;
+
+        if (MotionControl_IsEnabled())
+        {
+            Serial_WriteLine(
+                "OK: balance control already running."
+            );
+
+            return COMMAND_RESULT_OK;
+        }
+
+        ControlParameters_Get(
+            &parameters
+        );
+
+        StateEstimation_GetState(
+            &state
+        );
+
+        BalanceCommands_PrintArmEvent(
+            "attempt",
+            "none",
+            &state
+        );
+
+        if (!BalanceCommands_StateAllowsStart(
+                &state,
+                &parameters
+            ))
+        {
+            return COMMAND_RESULT_ERROR;
+        }
+
         MotorTest_Stop();
         MotionControl_Enable();
+
+        BalanceCommands_PrintArmEvent(
+            "accepted",
+            "none",
+            &state
+        );
 
         Serial_WriteLine(
             "OK: balance control started."
@@ -251,7 +300,7 @@ static void BalanceCommands_PrintStatus(void)
 
     Serial_Write(" fault_name=");
     Serial_Write(
-        BalanceCommands_FaultName(status.fault)
+        MotionControl_FaultName(status.fault)
     );
 
     Serial_Write(" cmd_age=");
@@ -293,28 +342,114 @@ static void BalanceCommands_PrintStatus(void)
     Serial_WriteLine("");
 }
 
-static const char *BalanceCommands_FaultName(
-    MotionControlFault fault
+static bool BalanceCommands_StateAllowsStart(
+    const RobotState *state,
+    const ControlParameters *parameters
 )
 {
-    switch (fault)
+    if (
+        state == NULL ||
+        parameters == NULL
+    )
     {
-        case MOTION_CONTROL_FAULT_NONE:
-            return "none";
-
-        case MOTION_CONTROL_FAULT_STATE_INVALID:
-            return "state_invalid";
-
-        case MOTION_CONTROL_FAULT_IMU_STALE:
-            return "imu_stale";
-
-        case MOTION_CONTROL_FAULT_FALL:
-            return "fall";
-
-        case MOTION_CONTROL_FAULT_ACTUATOR:
-            return "actuator";
-
-        default:
-            return "unknown";
+        return false;
     }
+
+    if (state->imu_stale)
+    {
+        BalanceCommands_PrintArmEvent(
+            "rejected",
+            "imu_stale",
+            state
+        );
+
+        Serial_WriteLine(
+            "ERROR: IMU data is stale."
+        );
+
+        return false;
+    }
+
+    if (!state->imu_valid)
+    {
+        BalanceCommands_PrintArmEvent(
+            "rejected",
+            "imu_not_ready",
+            state
+        );
+
+        Serial_WriteLine(
+            "ERROR: IMU state is not ready."
+        );
+
+        return false;
+    }
+
+    if (!state->encoder_valid)
+    {
+        BalanceCommands_PrintArmEvent(
+            "rejected",
+            "encoder_not_ready",
+            state
+        );
+
+        Serial_WriteLine(
+            "ERROR: encoder state is not ready."
+        );
+
+        return false;
+    }
+
+    if (
+        state->pitch_rad >
+        parameters->fall_angle_rad ||
+        state->pitch_rad <
+        -parameters->fall_angle_rad
+    )
+    {
+        BalanceCommands_PrintArmEvent(
+            "rejected",
+            "fall_angle",
+            state
+        );
+
+        Serial_WriteLine(
+            "ERROR: robot is past the fall angle."
+        );
+
+        return false;
+    }
+
+    if (!state->valid)
+    {
+        BalanceCommands_PrintArmEvent(
+            "rejected",
+            "state_not_ready",
+            state
+        );
+
+        Serial_WriteLine(
+            "ERROR: state is not ready."
+        );
+
+        return false;
+    }
+
+    return true;
+}
+
+static void BalanceCommands_PrintArmEvent(
+    const char *result,
+    const char *reason,
+    const RobotState *state
+)
+{
+    Serial_Write("EVT balance arm result=");
+    Serial_Write(result);
+    Serial_Write(" reason=");
+    Serial_Write(reason);
+    StateEventFormat_WriteState(
+        state
+    );
+    Serial_WriteLine("");
 }

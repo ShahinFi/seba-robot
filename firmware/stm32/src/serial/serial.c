@@ -5,7 +5,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 
 /*
  * Raspberry Pi UART:
@@ -21,7 +20,6 @@
 #define SERIAL_RX_PIN               GPIO_PIN_11
 
 #define SERIAL_BAUD_RATE            115200U
-#define SERIAL_TX_TIMEOUT_MS        100U
 
 /*
  * Power-of-two buffer size allows uint8_t indexes to wrap
@@ -31,6 +29,7 @@
  * position is reserved to distinguish full from empty.
  */
 #define SERIAL_RX_BUFFER_SIZE       256U
+#define SERIAL_TX_BUFFER_SIZE      2048U
 
 static UART_HandleTypeDef serial_uart;
 
@@ -58,9 +57,28 @@ static volatile uint8_t serial_rx_tail;
 
 static volatile bool serial_rx_overflow;
 
+static volatile uint8_t serial_tx_buffer[
+    SERIAL_TX_BUFFER_SIZE
+];
+
+static volatile uint16_t serial_tx_head;
+static volatile uint16_t serial_tx_tail;
+
+static volatile bool serial_tx_active;
+static volatile bool serial_tx_overflow;
+
+static uint8_t serial_tx_byte;
+
 static bool Serial_GPIOInit(void);
 static bool Serial_UARTInit(void);
 static bool Serial_StartReception(void);
+static void Serial_QueueByte(
+    uint8_t byte
+);
+static void Serial_StartTransmission(void);
+static uint16_t Serial_NextTxIndex(
+    uint16_t index
+);
 
 static void Serial_WriteUnsigned64(
     uint64_t value
@@ -71,7 +89,12 @@ bool Serial_Init(void)
     serial_rx_head = 0U;
     serial_rx_tail = 0U;
     serial_rx_overflow = false;
+    serial_tx_head = 0U;
+    serial_tx_tail = 0U;
+    serial_tx_active = false;
+    serial_tx_overflow = false;
     serial_received_byte = 0U;
+    serial_tx_byte = 0U;
 
     if (!Serial_GPIOInit())
     {
@@ -125,33 +148,19 @@ void Serial_Write(
     const char *text
 )
 {
-    size_t length;
-
     if (text == NULL)
     {
         return;
     }
 
-    length = strlen(text);
-
-    if (length == 0U)
+    while (*text != '\0')
     {
-        return;
-    }
+        Serial_QueueByte(
+            (uint8_t)*text
+        );
 
-    /*
-     * Transmit remains blocking because console output runs
-     * outside the actuator timer interrupt.
-     *
-     * Reception is interrupt-driven, so incoming characters
-     * are still buffered while this function is transmitting.
-     */
-    (void)HAL_UART_Transmit(
-        &serial_uart,
-        (const uint8_t *)text,
-        (uint16_t)length,
-        SERIAL_TX_TIMEOUT_MS
-    );
+        text++;
+    }
 }
 
 void Serial_WriteLine(
@@ -430,6 +439,92 @@ static bool Serial_StartReception(void)
            ) == HAL_OK;
 }
 
+static void Serial_QueueByte(
+    uint8_t byte
+)
+{
+    uint32_t interrupt_state;
+    uint16_t head;
+    uint16_t next_head;
+
+    interrupt_state =
+        __get_PRIMASK();
+
+    __disable_irq();
+
+    head =
+        serial_tx_head;
+
+    next_head =
+        Serial_NextTxIndex(head);
+
+    if (next_head == serial_tx_tail)
+    {
+        serial_tx_overflow = true;
+        __set_PRIMASK(
+            interrupt_state
+        );
+        return;
+    }
+
+    serial_tx_buffer[head] =
+        byte;
+
+    serial_tx_head =
+        next_head;
+
+    Serial_StartTransmission();
+
+    __set_PRIMASK(
+        interrupt_state
+    );
+}
+
+static void Serial_StartTransmission(void)
+{
+    if (
+        serial_tx_active ||
+        serial_tx_tail == serial_tx_head
+    )
+    {
+        return;
+    }
+
+    serial_tx_byte =
+        serial_tx_buffer[serial_tx_tail];
+
+    serial_tx_tail =
+        Serial_NextTxIndex(
+            serial_tx_tail
+        );
+
+    serial_tx_active =
+        true;
+
+    if (HAL_UART_Transmit_IT(
+            &serial_uart,
+            &serial_tx_byte,
+            1U
+        ) != HAL_OK)
+    {
+        serial_tx_active = false;
+    }
+}
+
+static uint16_t Serial_NextTxIndex(
+    uint16_t index
+)
+{
+    index++;
+
+    if (index >= SERIAL_TX_BUFFER_SIZE)
+    {
+        index = 0U;
+    }
+
+    return index;
+}
+
 static void Serial_WriteUnsigned64(
     uint64_t value
 )
@@ -541,6 +636,36 @@ void HAL_UART_RxCpltCallback(
         &serial_uart,
         &serial_received_byte,
         1U
+    );
+}
+
+/*
+ * Called by HAL after one queued transmit byte has completed.
+ */
+void HAL_UART_TxCpltCallback(
+    UART_HandleTypeDef *uart
+)
+{
+    uint32_t interrupt_state;
+
+    if (
+        uart == NULL ||
+        uart->Instance != USART3
+    )
+    {
+        return;
+    }
+
+    interrupt_state =
+        __get_PRIMASK();
+
+    __disable_irq();
+
+    serial_tx_active = false;
+    Serial_StartTransmission();
+
+    __set_PRIMASK(
+        interrupt_state
     );
 }
 

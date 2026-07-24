@@ -22,6 +22,7 @@ typedef struct
     bool state_invalid;
     bool fall_detected;
     MotionControlFault fault;
+    RobotState fault_state;
     uint32_t command_age_ms;
     uint32_t command_update_count;
     float forward_velocity_command_mps;
@@ -63,6 +64,10 @@ void MotionControl_Update(
 
 void MotionControl_GetStatus(
     MotionControlStatus *output
+);
+
+const char *MotionControl_FaultName(
+    MotionControlFault fault
 );
 
 #endif

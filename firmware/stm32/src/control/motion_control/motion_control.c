@@ -24,8 +24,10 @@ static uint32_t last_command_ms;
 static void MotionControl_ResetControllerState(void);
 static void MotionControl_ResetCommandState(void);
 static void MotionControl_ClearFaultState(void);
+static void MotionControl_ClearFaultContext(void);
 static void MotionControl_EnterFault(
-    MotionControlFault fault
+    MotionControlFault fault,
+    const RobotState *fault_state
 );
 static void MotionControl_UpdateCommandAge(void);
 static void MotionControl_ApplyCommandWatchdog(void);
@@ -61,6 +63,7 @@ void MotionControl_Init(void)
     status.fall_detected = false;
     status.fault =
         MOTION_CONTROL_FAULT_NONE;
+    MotionControl_ClearFaultContext();
     status.max_wheel_torque_mnm =
         parameters.max_wheel_torque_mnm;
     status.motion_gain_scale =
@@ -277,13 +280,15 @@ void MotionControl_Update(
         )
         {
             MotionControl_EnterFault(
-                MOTION_CONTROL_FAULT_IMU_STALE
+                MOTION_CONTROL_FAULT_IMU_STALE,
+                state
             );
         }
         else
         {
             MotionControl_EnterFault(
-                MOTION_CONTROL_FAULT_STATE_INVALID
+                MOTION_CONTROL_FAULT_STATE_INVALID,
+                state
             );
         }
 
@@ -298,7 +303,8 @@ void MotionControl_Update(
     )
     {
         MotionControl_EnterFault(
-            MOTION_CONTROL_FAULT_FALL
+            MOTION_CONTROL_FAULT_FALL,
+            state
         );
         return;
     }
@@ -371,7 +377,8 @@ void MotionControl_Update(
         ))
     {
         MotionControl_EnterFault(
-            MOTION_CONTROL_FAULT_ACTUATOR
+            MOTION_CONTROL_FAULT_ACTUATOR,
+            state
         );
     }
 }
@@ -395,6 +402,32 @@ void MotionControl_GetStatus(
     MotionControl_ExitCritical(
         interrupt_state
     );
+}
+
+const char *MotionControl_FaultName(
+    MotionControlFault fault
+)
+{
+    switch (fault)
+    {
+        case MOTION_CONTROL_FAULT_NONE:
+            return "none";
+
+        case MOTION_CONTROL_FAULT_STATE_INVALID:
+            return "state_invalid";
+
+        case MOTION_CONTROL_FAULT_IMU_STALE:
+            return "imu_stale";
+
+        case MOTION_CONTROL_FAULT_FALL:
+            return "fall";
+
+        case MOTION_CONTROL_FAULT_ACTUATOR:
+            return "actuator";
+
+        default:
+            return "unknown";
+    }
 }
 
 static void MotionControl_ResetControllerState(void)
@@ -449,10 +482,32 @@ static void MotionControl_ClearFaultState(void)
     status.fall_detected = false;
     status.fault =
         MOTION_CONTROL_FAULT_NONE;
+    MotionControl_ClearFaultContext();
+}
+
+static void MotionControl_ClearFaultContext(void)
+{
+    status.fault_state.valid = false;
+    status.fault_state.imu_valid = false;
+    status.fault_state.imu_stale = false;
+    status.fault_state.encoder_valid = false;
+    status.fault_state.update_count = 0U;
+    status.fault_state.orientation_update_count = 0U;
+    status.fault_state.gyroscope_update_count = 0U;
+    status.fault_state.orientation_age_ms = 0U;
+    status.fault_state.gyroscope_age_ms = 0U;
+    status.fault_state.forward_velocity_mps = 0.0F;
+    status.fault_state.pitch_rad = 0.0F;
+    status.fault_state.pitch_rate_rads = 0.0F;
+    status.fault_state.yaw_rate_rads = 0.0F;
+    status.fault_state.forward_acceleration_mps2 = 0.0F;
+    status.fault_state.pitch_acceleration_rads2 = 0.0F;
+    status.fault_state.yaw_acceleration_rads2 = 0.0F;
 }
 
 static void MotionControl_EnterFault(
-    MotionControlFault fault
+    MotionControlFault fault,
+    const RobotState *fault_state
 )
 {
     const uint32_t interrupt_state =
@@ -467,6 +522,11 @@ static void MotionControl_EnterFault(
         fault == MOTION_CONTROL_FAULT_FALL;
     status.fault =
         fault;
+    if (fault_state != NULL)
+    {
+        status.fault_state =
+            *fault_state;
+    }
 
     MotionControl_ResetCommandState();
     MotionControl_ResetControllerState();

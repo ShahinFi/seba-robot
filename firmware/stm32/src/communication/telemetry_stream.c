@@ -5,10 +5,6 @@
 #include "control/state_estimation/state_estimation.h"
 #include "serial/serial.h"
 
-static const char *TelemetryStream_MotionFaultName(
-    MotionControlFault fault
-);
-
 void TelemetryStream_WriteSnapshot(void)
 {
     RobotState state;
@@ -86,7 +82,7 @@ void TelemetryStream_WriteSnapshot(void)
 
     Serial_Write(" fault_name=");
     Serial_Write(
-        TelemetryStream_MotionFaultName(balance.fault)
+        MotionControl_FaultName(balance.fault)
     );
 
     Serial_Write(" cmd_age=");
@@ -144,30 +140,4 @@ void TelemetryStream_WriteSnapshot(void)
     Serial_WriteInt32(actuator.right_command_permille);
 
     Serial_WriteLine("");
-}
-
-static const char *TelemetryStream_MotionFaultName(
-    MotionControlFault fault
-)
-{
-    switch (fault)
-    {
-        case MOTION_CONTROL_FAULT_NONE:
-            return "none";
-
-        case MOTION_CONTROL_FAULT_STATE_INVALID:
-            return "state_invalid";
-
-        case MOTION_CONTROL_FAULT_IMU_STALE:
-            return "imu_stale";
-
-        case MOTION_CONTROL_FAULT_FALL:
-            return "fall";
-
-        case MOTION_CONTROL_FAULT_ACTUATOR:
-            return "actuator";
-
-        default:
-            return "unknown";
-    }
 }
