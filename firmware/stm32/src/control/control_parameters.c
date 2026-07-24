@@ -2,8 +2,18 @@
 
 #include <stddef.h>
 
+/*
+ * Central control constants.
+ *
+ * These values define the physical model, estimator timing,
+ * safety limits, and controller defaults used by the STM32
+ * runtime and Raspberry Pi tuner.
+ */
 static const ControlParameters control_parameters =
 {
+    /*
+     * Rigid-body model parameters used by the RSLQR design.
+     */
     .body_mass_kg = 2.90F,
     .wheel_radius_m = 0.035F,
     .wheel_separation_m = 0.10F,
@@ -14,6 +24,11 @@ static const ControlParameters control_parameters =
     .wheel_yaw_inertia_kg_m2 = 1.90625e-5F,
     .wheel_damping_nms_rad = 0.0005F,
     .encoder_counts_per_wheel_rev = 2800U,
+
+    /*
+     * Estimator and controller rates are matched so motion
+     * control consumes one completed state per control tick.
+     */
     .state_estimator_rate_hz = 200U,
     .motion_controller_rate_hz = 200U,
     .imu_orientation_timeout_ms = 50U,
@@ -21,9 +36,20 @@ static const ControlParameters control_parameters =
     .motion_command_timeout_ms = 300U,
     .velocity_filter_cutoff_hz = 20.0F,
     .derivative_filter_cutoff_hz = 15.0F,
+
+    /*
+     * Runtime safety and tuning defaults. These values match the
+     * Raspberry Pi tuner defaults unless changed over serial.
+     */
     .max_wheel_torque_mnm = 5000.0F,
     .fall_angle_rad = 1.047197551F,
     .motion_gain_scale = 2.5F,
+
+    /*
+     * RSLQR torque-rate gain rows:
+     *   row 0 = left wheel
+     *   row 1 = right wheel
+     */
     .rslqr_gain_nm_s =
     {
         {

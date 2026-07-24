@@ -1,6 +1,6 @@
 #include "actuator_commands.h"
 #include "command_parser.h"
-#include "control/actuator/actuator.h"
+#include "control/actuator_control/actuator_control.h"
 #include "control/motion_control/motion_control.h"
 #include "serial/serial.h"
 #include "tests/motor_test.h"
@@ -18,7 +18,7 @@ CommandResult ActuatorCommands_Handle(
 {
     int32_t value;
     int32_t second_value;
-    ActuatorStatus status;
+    ActuatorControlStatus status;
 
     if (argument_count == 2)
     {
@@ -62,13 +62,18 @@ CommandResult ActuatorCommands_Handle(
             return COMMAND_RESULT_ERROR;
         }
 
-        Actuator_GetStatus(
+        /*
+         * Single-side manual commands preserve the other wheel's
+         * current reference, then take ownership away from motor
+         * tests and motion control before enabling current control.
+         */
+        ActuatorControl_GetStatus(
             &status
         );
 
         if (strcmp(arguments[1], "left") == 0)
         {
-            if (!Actuator_SetCurrentReferences(
+            if (!ActuatorControl_SetCurrentReferences(
                     value,
                     status.right_current_reference_ma
                 ))
@@ -82,7 +87,7 @@ CommandResult ActuatorCommands_Handle(
 
             MotorTest_Stop();
             MotionControl_Disable();
-            Actuator_Enable();
+            ActuatorControl_Enable();
 
             Serial_WriteLine(
                 "OK: left current reference updated."
@@ -93,7 +98,7 @@ CommandResult ActuatorCommands_Handle(
 
         if (strcmp(arguments[1], "right") == 0)
         {
-            if (!Actuator_SetCurrentReferences(
+            if (!ActuatorControl_SetCurrentReferences(
                     status.left_current_reference_ma,
                     value
                 ))
@@ -107,7 +112,7 @@ CommandResult ActuatorCommands_Handle(
 
             MotorTest_Stop();
             MotionControl_Disable();
-            Actuator_Enable();
+            ActuatorControl_Enable();
 
             Serial_WriteLine(
                 "OK: right current reference updated."
@@ -118,7 +123,7 @@ CommandResult ActuatorCommands_Handle(
 
         if (strcmp(arguments[1], "kp") == 0)
         {
-            if (!Actuator_SetProportionalGain(value))
+            if (!ActuatorControl_SetProportionalGain(value))
             {
                 Serial_WriteLine(
                     "ERROR: kp must be nonnegative."
@@ -133,7 +138,7 @@ CommandResult ActuatorCommands_Handle(
 
         if (strcmp(arguments[1], "ki") == 0)
         {
-            if (!Actuator_SetIntegralGain(value))
+            if (!ActuatorControl_SetIntegralGain(value))
             {
                 Serial_WriteLine(
                     "ERROR: ki must be nonnegative."
@@ -148,7 +153,7 @@ CommandResult ActuatorCommands_Handle(
 
         if (strcmp(arguments[1], "battery") == 0)
         {
-            if (!Actuator_SetBatteryVoltage(value))
+            if (!ActuatorControl_SetBatteryVoltage(value))
             {
                 Serial_WriteLine(
                     "ERROR: battery voltage must be positive."
@@ -166,7 +171,7 @@ CommandResult ActuatorCommands_Handle(
 
         if (strcmp(arguments[1], "max-current") == 0)
         {
-            if (!Actuator_SetMaxCurrentReference(value))
+            if (!ActuatorControl_SetMaxCurrentReference(value))
             {
                 Serial_WriteLine(
                     "ERROR: max current must be nonnegative."
@@ -187,7 +192,7 @@ CommandResult ActuatorCommands_Handle(
             if (
                 value < 0 ||
                 value > 100 ||
-                !Actuator_SetMaxCommandPercent(
+                !ActuatorControl_SetMaxCommandPercent(
                     (int16_t)value
                 )
             )
@@ -208,7 +213,7 @@ CommandResult ActuatorCommands_Handle(
 
         if (strcmp(arguments[1], "integral-limit") == 0)
         {
-            if (!Actuator_SetIntegralLimit(value))
+            if (!ActuatorControl_SetIntegralLimit(value))
             {
                 Serial_WriteLine(
                     "ERROR: integral limit must be nonnegative."
@@ -229,7 +234,7 @@ CommandResult ActuatorCommands_Handle(
             if (
                 value <= 0 ||
                 value > 1000 ||
-                !Actuator_SetControlPeriod(
+                !ActuatorControl_SetControlPeriod(
                     (uint32_t)value
                 )
             )
@@ -250,7 +255,7 @@ CommandResult ActuatorCommands_Handle(
 
         if (strcmp(arguments[1], "torque-constant") == 0)
         {
-            if (!Actuator_SetWheelTorqueConstant(value))
+            if (!ActuatorControl_SetWheelTorqueConstant(value))
             {
                 Serial_WriteLine(
                     "ERROR: torque constant must be positive."
@@ -299,7 +304,7 @@ CommandResult ActuatorCommands_Handle(
 
         if (strcmp(arguments[1], "both") == 0)
         {
-            if (!Actuator_SetCurrentReferences(
+            if (!ActuatorControl_SetCurrentReferences(
                     value,
                     second_value
                 ))
@@ -313,7 +318,7 @@ CommandResult ActuatorCommands_Handle(
         }
         else
         {
-            if (!Actuator_SetWheelTorqueReferences(
+            if (!ActuatorControl_SetWheelTorqueReferences(
                     value,
                     second_value
                 ))
@@ -326,9 +331,13 @@ CommandResult ActuatorCommands_Handle(
             }
         }
 
+        /*
+         * Pair commands replace both wheel references atomically
+         * before enabling the actuator loop.
+         */
         MotorTest_Stop();
         MotionControl_Disable();
-        Actuator_Enable();
+        ActuatorControl_Enable();
 
         if (strcmp(arguments[1], "both") == 0)
         {
@@ -355,9 +364,9 @@ CommandResult ActuatorCommands_Handle(
 
 static void ActuatorCommands_PrintConfig(void)
 {
-    ActuatorConfig config;
+    ActuatorControlConfig config;
 
-    Actuator_GetConfig(
+    ActuatorControl_GetConfig(
         &config
     );
 
@@ -398,9 +407,9 @@ static void ActuatorCommands_PrintConfig(void)
 
 static void ActuatorCommands_PrintStatus(void)
 {
-    ActuatorStatus status;
+    ActuatorControlStatus status;
 
-    Actuator_GetStatus(
+    ActuatorControl_GetStatus(
         &status
     );
 

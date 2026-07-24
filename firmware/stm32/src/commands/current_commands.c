@@ -1,6 +1,6 @@
 #include "current_commands.h"
 #include "command_parser.h"
-#include "control/actuator/actuator.h"
+#include "control/actuator_control/actuator_control.h"
 #include "current_sensor/current_sensor.h"
 #include "serial/serial.h"
 #include "tests/current_sensor_test.h"
@@ -21,8 +21,12 @@ CommandResult CurrentCommands_Handle(
         strcmp(arguments[1], "read") == 0
     )
     {
-        if (Actuator_IsEnabled())
+        if (ActuatorControl_IsEnabled())
         {
+            /*
+             * Manual current diagnostics would compete with the
+             * timer-driven actuator loop for current readings.
+             */
             Serial_WriteLine(
                 "ERROR: stop actuator control before using current read."
             );
@@ -78,8 +82,12 @@ CommandResult CurrentCommands_Handle(
             return COMMAND_RESULT_ERROR;
         }
 
-        if (Actuator_IsEnabled())
+        if (ActuatorControl_IsEnabled())
         {
+            /*
+             * Scope capture is a blocking diagnostic readout, so
+             * it is only allowed when current control is stopped.
+             */
             Serial_WriteLine(
                 "ERROR: stop actuator control before using current scope."
             );

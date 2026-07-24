@@ -12,6 +12,11 @@
 #define STATE_ESTIMATION_TWO_PI  6.28318530718F
 #define STATE_ESTIMATION_TIMER_HZ      1000000U
 
+/*
+ * The estimator runs from TIM15 at the same rate as the
+ * motion controller. This keeps state updates and control
+ * updates aligned in one interrupt-driven path.
+ */
 static ControlParameters parameters;
 static RobotState state;
 static int64_t previous_left_position;
@@ -100,6 +105,11 @@ void StateEstimation_Reset(void)
     const uint32_t interrupt_state =
         StateEstimation_EnterCritical();
 
+    /*
+     * Reset only encoder-derived motion state. Keep the current
+     * IMU rates as derivative references so reset does not create
+     * a synthetic angular-acceleration spike.
+     */
     Encoder_Update();
 
     previous_left_position =
@@ -173,6 +183,11 @@ static void StateEstimation_Update(void)
         ) /
         (float)parameters.encoder_counts_per_wheel_rev;
 
+    /*
+     * IMU freshness is checked independently for orientation
+     * and gyroscope reports because the BNO085 publishes them
+     * at different rates.
+     */
     imu_available =
         IMU_GetLatest(
             &imu
@@ -230,6 +245,10 @@ static void StateEstimation_Update(void)
         ) /
         sample_period_s;
 
+    /*
+     * Forward velocity uses the average wheel speed. Wheel signs
+     * are already normalized inside the encoder module.
+     */
     raw_forward_velocity_mps =
         (
             left_velocity_mps +
@@ -296,6 +315,11 @@ static void StateEstimation_Update(void)
 
     if (imu_valid)
     {
+        /*
+         * Pitch and yaw rates come directly from the IMU module.
+         * Their derivatives are filtered here before entering the
+         * augmented controller state.
+         */
         state.pitch_rad =
             imu.robot_pitch_rad;
 
@@ -350,6 +374,10 @@ static void StateEstimation_Update(void)
 
     state.update_count++;
 
+    /*
+     * Motion control consumes the completed state snapshot from
+     * this same estimator tick.
+     */
     MotionControl_Update(
         &state
     );
@@ -392,6 +420,10 @@ static float StateEstimation_FilterAlpha(
             cutoff_hz
         );
 
+    /*
+     * First-order low-pass filter coefficient for the fixed
+     * estimator sample period.
+     */
     return
         sample_period_s /
         (

@@ -3,8 +3,27 @@
 
 #include <stdint.h>
 
+/*
+ * Physical model, estimator timing, safety limits, and RSLQR
+ * defaults shared by the STM32 control modules.
+ */
 typedef struct
 {
+    /*
+     * Field suffixes carry the physical units.
+     *
+     * RSLQR gain rows:
+     *   0 = left wheel torque rate
+     *   1 = right wheel torque rate
+     *
+     * RSLQR gain columns:
+     *   0 = v error
+     *   1 = psi_dot error
+     *   2 = v_dot
+     *   3 = theta_dot
+     *   4 = theta_ddot
+     *   5 = psi_ddot
+     */
     float body_mass_kg;
     float wheel_radius_m;
     float wheel_separation_m;
@@ -28,6 +47,9 @@ typedef struct
     float rslqr_gain_nm_s[2][6];
 } ControlParameters;
 
+/*
+ * Copies the immutable default parameter set.
+ */
 void ControlParameters_Get(
     ControlParameters *parameters
 );

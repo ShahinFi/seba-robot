@@ -124,7 +124,7 @@ src/
 |-- communication/
 |-- console/
 |-- control/
-|   |-- actuator/
+|   |-- actuator_control/
 |   |-- motion_control/
 |   `-- state_estimation/
 |-- current_sensor/
@@ -143,7 +143,7 @@ src/
 - `src/current_sensor/` measures ACS711 motor current using ADC, DMA, timer-triggered sampling, zero-current offsets, and fault inputs.
 - `src/control/state_estimation/` builds the robot state used by the controller.
 - `src/control/motion_control/` runs the RSLQR motion controller and produces wheel-side torque references.
-- `src/control/actuator/` converts wheel-side torque references into current references and PWM commands.
+- `src/control/actuator_control/` converts wheel-side torque references into current references and PWM commands.
 - `src/control/control_parameters.*` contains the physical parameters, timing parameters, filters, safety thresholds, torque limits, and RSLQR gain defaults.
 - `src/commands/` parses and executes human-readable command groups.
 - `src/communication/` implements acknowledged commands, telemetry lines, and event lines.

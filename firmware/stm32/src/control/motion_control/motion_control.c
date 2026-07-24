@@ -1,6 +1,6 @@
 #include "motion_control.h"
 
-#include "control/actuator/actuator.h"
+#include "control/actuator_control/actuator_control.h"
 #include "control/control_parameters.h"
 
 #include <stddef.h>
@@ -11,6 +11,11 @@
 #define MOTION_CONTROL_MNM_PER_NM  1000.0F
 #define MOTION_CONTROL_AUGMENTED_COUNT    6U
 
+/*
+ * The motion controller implements the RSLQR design from
+ * control/README.md. It computes wheel-side torque commands;
+ * actuator_control realizes those torques as motor current.
+ */
 typedef struct
 {
     float left_torque_mnm;
@@ -78,6 +83,10 @@ void MotionControl_Enable(void)
     uint32_t interrupt_state =
         MotionControl_EnterCritical();
 
+    /*
+     * Keep the externally visible state disabled while the
+     * controller state and actuator layer are being armed.
+     */
     status.enabled = false;
     MotionControl_ResetCommandState();
     MotionControl_ResetControllerState();
@@ -87,7 +96,7 @@ void MotionControl_Enable(void)
         interrupt_state
     );
 
-    Actuator_Enable();
+    ActuatorControl_Enable();
 
     interrupt_state =
         MotionControl_EnterCritical();
@@ -114,7 +123,7 @@ void MotionControl_Disable(void)
         interrupt_state
     );
 
-    Actuator_Disable();
+    ActuatorControl_Disable();
 }
 
 bool MotionControl_IsEnabled(void)
@@ -145,6 +154,10 @@ bool MotionControl_SetMaxWheelTorque(
     const uint32_t interrupt_state =
         MotionControl_EnterCritical();
 
+    /*
+     * If the torque limit is reduced while running, clamp the
+     * stored torque commands immediately.
+     */
     parameters.max_wheel_torque_mnm =
         max_wheel_torque_mnm;
 
@@ -274,6 +287,10 @@ void MotionControl_Update(
         !state->valid
     )
     {
+        /*
+         * State validity faults disable torque output before any
+         * control law is evaluated.
+         */
         if (
             state != NULL &&
             state->imu_stale
@@ -309,6 +326,14 @@ void MotionControl_Update(
         return;
     }
 
+    /*
+     * RSLQR augmented state:
+     *
+     * Z = [Y - r; X_dot]
+     *
+     * where Y = [v; psi_dot] and
+     * X_dot = [v_dot; theta_dot; theta_ddot; psi_ddot].
+     */
     augmented_state[0] =
         state->forward_velocity_mps -
         status.forward_velocity_command_mps;
@@ -332,6 +357,10 @@ void MotionControl_Update(
     status.left_torque_rate_mnm_s = 0.0F;
     status.right_torque_rate_mnm_s = 0.0F;
 
+    /*
+     * The gain matrix outputs torque rate. Integrating that
+     * rate produces the wheel-side torque command U.
+     */
     for (uint32_t index = 0U; index < MOTION_CONTROL_AUGMENTED_COUNT; index++)
     {
         status.left_torque_rate_mnm_s -=
@@ -367,7 +396,7 @@ void MotionControl_Update(
     status.right_torque_command_mnm =
         candidate.right_torque_mnm;
 
-    if (!Actuator_SetWheelTorqueReferences(
+    if (!ActuatorControl_SetWheelTorqueReferences(
             MotionControl_TorqueToMillinewtonMeters(
                 status.left_torque_command_mnm
             ),
@@ -395,6 +424,10 @@ void MotionControl_GetStatus(
     const uint32_t interrupt_state =
         MotionControl_EnterCritical();
 
+    /*
+     * Command age is time-derived, so refresh it before copying
+     * the public status snapshot.
+     */
     MotionControl_UpdateCommandAge();
 
     *output = status;
@@ -466,6 +499,10 @@ static void MotionControl_ApplyCommandWatchdog(void)
         parameters.motion_command_timeout_ms
     )
     {
+        /*
+         * Lost operator commands decay to a stop command while
+         * leaving balance enabled.
+         */
         status.forward_velocity_command_mps = 0.0F;
         status.yaw_rate_command_rads = 0.0F;
     }
@@ -522,6 +559,11 @@ static void MotionControl_EnterFault(
         fault == MOTION_CONTROL_FAULT_FALL;
     status.fault =
         fault;
+
+    /*
+     * Preserve the state that caused the fault so the event log
+     * reports the failing condition, not a recovered state.
+     */
     if (fault_state != NULL)
     {
         status.fault_state =
@@ -535,7 +577,7 @@ static void MotionControl_EnterFault(
         interrupt_state
     );
 
-    Actuator_Disable();
+    ActuatorControl_Disable();
 }
 
 static float MotionControl_Clamp(
@@ -575,6 +617,11 @@ static float MotionControl_IntegrateTorque(
         torque_rate_mnm_s *
         sample_period_s;
 
+    /*
+     * Anti-windup for the torque integrator: when the command is
+     * already saturated, ignore torque rates that push farther
+     * into saturation.
+     */
     if (
         limited_current_torque_mnm >=
         parameters.max_wheel_torque_mnm &&

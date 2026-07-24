@@ -1,4 +1,4 @@
-#include "actuator.h"
+#include "actuator_control.h"
 
 #include "current_sensor/current_sensor.h"
 #include "motor/motor.h"
@@ -7,86 +7,101 @@
 
 #include <stddef.h>
 
-#define ACTUATOR_DEFAULT_PERIOD_MS           1U
-#define ACTUATOR_DEFAULT_BATTERY_MV     11100L
-#define ACTUATOR_DEFAULT_KP_MV_PER_A     3000L
-#define ACTUATOR_DEFAULT_KI_MV_PER_A_S      0L
-#define ACTUATOR_DEFAULT_INTEGRAL_MV     3000L
-#define ACTUATOR_DEFAULT_MAX_CURRENT_MA   5000L
-#define ACTUATOR_DEFAULT_MAX_COMMAND     100
-#define ACTUATOR_DEFAULT_KTW_MNM_PER_A  1000L
-#define ACTUATOR_TIMER_HZ               1000U
+/*
+ * Startup defaults for the current loop. The Raspberry Pi tuner
+ * uses matching values so the UI reflects firmware behavior at
+ * power-up.
+ */
+#define ACTUATOR_CONTROL_DEFAULT_PERIOD_MS           1U
+#define ACTUATOR_CONTROL_DEFAULT_BATTERY_MV     11100L
+#define ACTUATOR_CONTROL_DEFAULT_KP_MV_PER_A     3000L
+#define ACTUATOR_CONTROL_DEFAULT_KI_MV_PER_A_S      0L
+#define ACTUATOR_CONTROL_DEFAULT_INTEGRAL_MV     3000L
+#define ACTUATOR_CONTROL_DEFAULT_MAX_CURRENT_MA   5000L
+#define ACTUATOR_CONTROL_DEFAULT_MAX_COMMAND     100
+#define ACTUATOR_CONTROL_DEFAULT_KTW_MNM_PER_A  1000L
 
-static ActuatorConfig config;
-static ActuatorStatus status;
+/*
+ * TIM7 runs the actuator scheduler at 1 kHz. The configured
+ * control period divides this fixed tick.
+ */
+#define ACTUATOR_CONTROL_TIMER_HZ               1000U
+
+/*
+ * Current control runs from TIM7. Command/config updates can
+ * arrive from the serial command path, so shared state is
+ * protected with short critical sections.
+ */
+static ActuatorControlConfig config;
+static ActuatorControlStatus status;
 static volatile uint32_t control_tick_count;
 
-static int32_t Actuator_ClampInt32(
+static int32_t ActuatorControl_ClampInt32(
     int32_t value,
     int32_t minimum,
     int32_t maximum
 );
 
-static int16_t Actuator_ClampCommandPermille(
+static int16_t ActuatorControl_ClampCommandPermille(
     int32_t command_permille
 );
 
-static int32_t Actuator_TorqueToCurrent(
+static int32_t ActuatorControl_TorqueToCurrent(
     int32_t torque_mnm
 );
 
-static int16_t Actuator_UpdateChannel(
+static int16_t ActuatorControl_UpdateChannel(
     int32_t reference_ma,
     int32_t measured_ma,
     int32_t *integral_mv,
     int32_t *error_ma
 );
 
-static void Actuator_ResetState(void);
+static void ActuatorControl_ResetState(void);
 
-static int32_t Actuator_CommandToVoltageLimit(void);
+static int32_t ActuatorControl_CommandToVoltageLimit(void);
 
-static int16_t Actuator_VoltageToCommandPermille(
+static int16_t ActuatorControl_VoltageToCommandPermille(
     int32_t control_mv
 );
 
-static void Actuator_Timer_Init(void);
-static void Actuator_ProcessTick(void);
-static uint32_t Actuator_EnterCritical(void);
-static void Actuator_ExitCritical(uint32_t interrupt_state);
+static void ActuatorControl_TimerInit(void);
+static void ActuatorControl_ProcessTick(void);
+static uint32_t ActuatorControl_EnterCritical(void);
+static void ActuatorControl_ExitCritical(uint32_t interrupt_state);
 
-void Actuator_Init(void)
+void ActuatorControl_Init(void)
 {
     config.control_period_ms =
-        ACTUATOR_DEFAULT_PERIOD_MS;
+        ACTUATOR_CONTROL_DEFAULT_PERIOD_MS;
 
     config.battery_voltage_mv =
-        ACTUATOR_DEFAULT_BATTERY_MV;
+        ACTUATOR_CONTROL_DEFAULT_BATTERY_MV;
 
     config.proportional_gain_mv_per_a =
-        ACTUATOR_DEFAULT_KP_MV_PER_A;
+        ACTUATOR_CONTROL_DEFAULT_KP_MV_PER_A;
 
     config.integral_gain_mv_per_a_s =
-        ACTUATOR_DEFAULT_KI_MV_PER_A_S;
+        ACTUATOR_CONTROL_DEFAULT_KI_MV_PER_A_S;
 
     config.integral_limit_mv =
-        ACTUATOR_DEFAULT_INTEGRAL_MV;
+        ACTUATOR_CONTROL_DEFAULT_INTEGRAL_MV;
 
     config.max_current_reference_ma =
-        ACTUATOR_DEFAULT_MAX_CURRENT_MA;
+        ACTUATOR_CONTROL_DEFAULT_MAX_CURRENT_MA;
 
     config.max_command_percent =
-        ACTUATOR_DEFAULT_MAX_COMMAND;
+        ACTUATOR_CONTROL_DEFAULT_MAX_COMMAND;
 
     config.wheel_torque_constant_mnm_per_a =
-        ACTUATOR_DEFAULT_KTW_MNM_PER_A;
+        ACTUATOR_CONTROL_DEFAULT_KTW_MNM_PER_A;
 
-    Actuator_ResetState();
+    ActuatorControl_ResetState();
     Motor_Disable();
-    Actuator_Timer_Init();
+    ActuatorControl_TimerInit();
 }
 
-static void Actuator_ProcessTick(void)
+static void ActuatorControl_ProcessTick(void)
 {
     CurrentSensorReading left;
     CurrentSensorReading right;
@@ -116,7 +131,7 @@ static void Actuator_ProcessTick(void)
         ))
     {
         status.read_failed = true;
-        Actuator_Disable();
+        ActuatorControl_Disable();
         return;
     }
 
@@ -132,12 +147,16 @@ static void Actuator_ProcessTick(void)
 
     if (status.fault_active)
     {
-        Actuator_Disable();
+        /*
+         * Current-sensor faults indicate an electrical fault
+         * condition reported by the ACS711 boards.
+         */
+        ActuatorControl_Disable();
         return;
     }
 
     status.left_command_permille =
-        Actuator_UpdateChannel(
+        ActuatorControl_UpdateChannel(
             status.left_current_reference_ma,
             status.left_current_measured_ma,
             &status.left_integral_mv,
@@ -145,7 +164,7 @@ static void Actuator_ProcessTick(void)
         );
 
     status.right_command_permille =
-        Actuator_UpdateChannel(
+        ActuatorControl_UpdateChannel(
             status.right_current_reference_ma,
             status.right_current_measured_ma,
             &status.right_integral_mv,
@@ -161,24 +180,28 @@ static void Actuator_ProcessTick(void)
     );
 }
 
-void Actuator_Enable(void)
+void ActuatorControl_Enable(void)
 {
     uint32_t interrupt_state;
 
+    /*
+     * Keep the timer ISR inactive while the motor drivers are
+     * waking, then enable current control from a clean state.
+     */
     interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
     status.enabled = false;
     control_tick_count = 0U;
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 
     Motor_Enable();
 
     interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
     status.enabled = true;
     status.read_failed = false;
@@ -189,16 +212,21 @@ void Actuator_Enable(void)
     status.right_command_permille = 0;
     control_tick_count = 0U;
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 }
 
-void Actuator_Disable(void)
+void ActuatorControl_Disable(void)
 {
     uint32_t interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
+    /*
+     * Disable clears all command and integrator state before
+     * stopping the motor outputs, so the next enable starts from
+     * zero current demand.
+     */
     status.enabled = false;
     status.left_current_reference_ma = 0;
     status.right_current_reference_ma = 0;
@@ -210,7 +238,7 @@ void Actuator_Disable(void)
     status.right_command_permille = 0;
     control_tick_count = 0U;
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 
@@ -218,22 +246,22 @@ void Actuator_Disable(void)
     Motor_Disable();
 }
 
-bool Actuator_IsEnabled(void)
+bool ActuatorControl_IsEnabled(void)
 {
     bool enabled;
     uint32_t interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
     enabled = status.enabled;
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 
     return enabled;
 }
 
-bool Actuator_SetCurrentReferences(
+bool ActuatorControl_SetCurrentReferences(
     int32_t left_current_ma,
     int32_t right_current_ma
 )
@@ -252,8 +280,12 @@ bool Actuator_SetCurrentReferences(
         return false;
     }
 
+    /*
+     * References are updated together so the timer tick never
+     * sees a mixed left/right command pair.
+     */
     const uint32_t interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
     status.left_current_reference_ma =
         left_current_ma;
@@ -261,35 +293,35 @@ bool Actuator_SetCurrentReferences(
     status.right_current_reference_ma =
         right_current_ma;
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 
     return true;
 }
 
-bool Actuator_SetWheelTorqueReferences(
+bool ActuatorControl_SetWheelTorqueReferences(
     int32_t left_torque_mnm,
     int32_t right_torque_mnm
 )
 {
     const int32_t left_current_ma =
-        Actuator_TorqueToCurrent(
+        ActuatorControl_TorqueToCurrent(
             left_torque_mnm
         );
 
     const int32_t right_current_ma =
-        Actuator_TorqueToCurrent(
+        ActuatorControl_TorqueToCurrent(
             right_torque_mnm
         );
 
-    return Actuator_SetCurrentReferences(
+    return ActuatorControl_SetCurrentReferences(
         left_current_ma,
         right_current_ma
     );
 }
 
-bool Actuator_SetControlPeriod(uint32_t control_period_ms)
+bool ActuatorControl_SetControlPeriod(uint32_t control_period_ms)
 {
     if (
         control_period_ms == 0U ||
@@ -300,21 +332,25 @@ bool Actuator_SetControlPeriod(uint32_t control_period_ms)
     }
 
     const uint32_t interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
+    /*
+     * Reset the divider so the new period starts from a full
+     * timing interval.
+     */
     config.control_period_ms =
         control_period_ms;
 
     control_tick_count = 0U;
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 
     return true;
 }
 
-bool Actuator_SetBatteryVoltage(int32_t battery_voltage_mv)
+bool ActuatorControl_SetBatteryVoltage(int32_t battery_voltage_mv)
 {
     if (battery_voltage_mv <= 0)
     {
@@ -322,19 +358,19 @@ bool Actuator_SetBatteryVoltage(int32_t battery_voltage_mv)
     }
 
     const uint32_t interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
     config.battery_voltage_mv =
         battery_voltage_mv;
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 
     return true;
 }
 
-bool Actuator_SetProportionalGain(int32_t gain_mv_per_a)
+bool ActuatorControl_SetProportionalGain(int32_t gain_mv_per_a)
 {
     if (gain_mv_per_a < 0)
     {
@@ -342,19 +378,19 @@ bool Actuator_SetProportionalGain(int32_t gain_mv_per_a)
     }
 
     const uint32_t interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
     config.proportional_gain_mv_per_a =
         gain_mv_per_a;
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 
     return true;
 }
 
-bool Actuator_SetIntegralGain(int32_t gain_mv_per_a_s)
+bool ActuatorControl_SetIntegralGain(int32_t gain_mv_per_a_s)
 {
     if (gain_mv_per_a_s < 0)
     {
@@ -362,19 +398,19 @@ bool Actuator_SetIntegralGain(int32_t gain_mv_per_a_s)
     }
 
     const uint32_t interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
     config.integral_gain_mv_per_a_s =
         gain_mv_per_a_s;
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 
     return true;
 }
 
-bool Actuator_SetIntegralLimit(int32_t integral_limit_mv)
+bool ActuatorControl_SetIntegralLimit(int32_t integral_limit_mv)
 {
     if (integral_limit_mv < 0)
     {
@@ -382,33 +418,37 @@ bool Actuator_SetIntegralLimit(int32_t integral_limit_mv)
     }
 
     const uint32_t interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
+    /*
+     * Apply the new integrator limit immediately to any stored
+     * integral state.
+     */
     config.integral_limit_mv =
         integral_limit_mv;
 
     status.left_integral_mv =
-        Actuator_ClampInt32(
+        ActuatorControl_ClampInt32(
             status.left_integral_mv,
             -config.integral_limit_mv,
             config.integral_limit_mv
         );
 
     status.right_integral_mv =
-        Actuator_ClampInt32(
+        ActuatorControl_ClampInt32(
             status.right_integral_mv,
             -config.integral_limit_mv,
             config.integral_limit_mv
         );
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 
     return true;
 }
 
-bool Actuator_SetMaxCurrentReference(int32_t max_current_ma)
+bool ActuatorControl_SetMaxCurrentReference(int32_t max_current_ma)
 {
     if (max_current_ma < 0)
     {
@@ -416,33 +456,37 @@ bool Actuator_SetMaxCurrentReference(int32_t max_current_ma)
     }
 
     const uint32_t interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
+    /*
+     * Apply a reduced current limit immediately to any active
+     * current references.
+     */
     config.max_current_reference_ma =
         max_current_ma;
 
     status.left_current_reference_ma =
-        Actuator_ClampInt32(
+        ActuatorControl_ClampInt32(
             status.left_current_reference_ma,
             -config.max_current_reference_ma,
             config.max_current_reference_ma
         );
 
     status.right_current_reference_ma =
-        Actuator_ClampInt32(
+        ActuatorControl_ClampInt32(
             status.right_current_reference_ma,
             -config.max_current_reference_ma,
             config.max_current_reference_ma
         );
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 
     return true;
 }
 
-bool Actuator_SetMaxCommandPercent(int16_t max_command_percent)
+bool ActuatorControl_SetMaxCommandPercent(int16_t max_command_percent)
 {
     if (
         max_command_percent < 0 ||
@@ -453,19 +497,19 @@ bool Actuator_SetMaxCommandPercent(int16_t max_command_percent)
     }
 
     const uint32_t interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
     config.max_command_percent =
         max_command_percent;
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 
     return true;
 }
 
-bool Actuator_SetWheelTorqueConstant(int32_t torque_constant_mnm_per_a)
+bool ActuatorControl_SetWheelTorqueConstant(int32_t torque_constant_mnm_per_a)
 {
     if (torque_constant_mnm_per_a <= 0)
     {
@@ -473,20 +517,24 @@ bool Actuator_SetWheelTorqueConstant(int32_t torque_constant_mnm_per_a)
     }
 
     const uint32_t interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
+    /*
+     * The torque constant is used on the next torque-reference
+     * update to convert wheel torque into motor current.
+     */
     config.wheel_torque_constant_mnm_per_a =
         torque_constant_mnm_per_a;
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 
     return true;
 }
 
-void Actuator_GetConfig(
-    ActuatorConfig *output
+void ActuatorControl_GetConfig(
+    ActuatorControlConfig *output
 )
 {
     if (output == NULL)
@@ -495,17 +543,17 @@ void Actuator_GetConfig(
     }
 
     const uint32_t interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
     *output = config;
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 }
 
-void Actuator_GetStatus(
-    ActuatorStatus *output
+void ActuatorControl_GetStatus(
+    ActuatorControlStatus *output
 )
 {
     if (output == NULL)
@@ -514,16 +562,16 @@ void Actuator_GetStatus(
     }
 
     const uint32_t interrupt_state =
-        Actuator_EnterCritical();
+        ActuatorControl_EnterCritical();
 
     *output = status;
 
-    Actuator_ExitCritical(
+    ActuatorControl_ExitCritical(
         interrupt_state
     );
 }
 
-static int32_t Actuator_ClampInt32(
+static int32_t ActuatorControl_ClampInt32(
     int32_t value,
     int32_t minimum,
     int32_t maximum
@@ -542,7 +590,7 @@ static int32_t Actuator_ClampInt32(
     return value;
 }
 
-static int16_t Actuator_ClampCommandPermille(
+static int16_t ActuatorControl_ClampCommandPermille(
     int32_t command_permille
 )
 {
@@ -551,7 +599,7 @@ static int16_t Actuator_ClampCommandPermille(
         10L;
 
     command_permille =
-        Actuator_ClampInt32(
+        ActuatorControl_ClampInt32(
             command_permille,
             -maximum_command_permille,
             maximum_command_permille
@@ -560,10 +608,14 @@ static int16_t Actuator_ClampCommandPermille(
     return (int16_t)command_permille;
 }
 
-static int32_t Actuator_TorqueToCurrent(
+static int32_t ActuatorControl_TorqueToCurrent(
     int32_t torque_mnm
 )
 {
+    /*
+     * torque_constant is mN*m/A, so multiplying torque by 1000
+     * converts amperes to milliamps.
+     */
     return (int32_t)(
         (
             (int64_t)torque_mnm *
@@ -573,7 +625,7 @@ static int32_t Actuator_TorqueToCurrent(
     );
 }
 
-static int16_t Actuator_UpdateChannel(
+static int16_t ActuatorControl_UpdateChannel(
     int32_t reference_ma,
     int32_t measured_ma,
     int32_t *integral_mv,
@@ -585,10 +637,15 @@ static int16_t Actuator_UpdateChannel(
     int32_t requested_mv;
     int32_t saturated_mv;
     const int32_t voltage_limit_mv =
-        Actuator_CommandToVoltageLimit();
+        ActuatorControl_CommandToVoltageLimit();
 
     if (reference_ma == 0)
     {
+        /*
+         * A zero reference is treated as a hard stop for this
+         * channel so residual measured current cannot command
+         * reverse PWM.
+         */
         *error_ma =
             -measured_ma;
 
@@ -625,7 +682,7 @@ static int16_t Actuator_UpdateChannel(
         );
 
     candidate_integral_mv =
-        Actuator_ClampInt32(
+        ActuatorControl_ClampInt32(
             candidate_integral_mv,
             -config.integral_limit_mv,
             config.integral_limit_mv
@@ -636,7 +693,7 @@ static int16_t Actuator_UpdateChannel(
         candidate_integral_mv;
 
     saturated_mv =
-        Actuator_ClampInt32(
+        ActuatorControl_ClampInt32(
             requested_mv,
             -voltage_limit_mv,
             voltage_limit_mv
@@ -654,6 +711,11 @@ static int16_t Actuator_UpdateChannel(
         )
     )
     {
+        /*
+         * Integrate only when the output is not saturated, or
+         * when the error would drive the saturated output back
+         * toward the valid range.
+         */
         *integral_mv =
             candidate_integral_mv;
     }
@@ -663,18 +725,18 @@ static int16_t Actuator_UpdateChannel(
         *integral_mv;
 
     saturated_mv =
-        Actuator_ClampInt32(
+        ActuatorControl_ClampInt32(
             requested_mv,
             -voltage_limit_mv,
             voltage_limit_mv
         );
 
-    return Actuator_VoltageToCommandPermille(
+    return ActuatorControl_VoltageToCommandPermille(
         saturated_mv
     );
 }
 
-static void Actuator_ResetState(void)
+static void ActuatorControl_ResetState(void)
 {
     status.enabled = false;
     status.fault_active = false;
@@ -692,8 +754,12 @@ static void Actuator_ResetState(void)
     control_tick_count = 0U;
 }
 
-static int32_t Actuator_CommandToVoltageLimit(void)
+static int32_t ActuatorControl_CommandToVoltageLimit(void)
 {
+    /*
+     * Max PWM limits the maximum average motor voltage available
+     * to the current controller.
+     */
     return (int32_t)(
         (
             (int64_t)config.battery_voltage_mv *
@@ -703,12 +769,16 @@ static int32_t Actuator_CommandToVoltageLimit(void)
     );
 }
 
-static int16_t Actuator_VoltageToCommandPermille(
+static int16_t ActuatorControl_VoltageToCommandPermille(
     int32_t control_mv
 )
 {
     int32_t command_permille;
 
+    /*
+     * Convert signed average motor voltage to signed PWM
+     * per-mille with symmetric rounding.
+     */
     if (control_mv >= 0)
     {
         command_permille = (int32_t)(
@@ -732,12 +802,12 @@ static int16_t Actuator_VoltageToCommandPermille(
         );
     }
 
-    return Actuator_ClampCommandPermille(
+    return ActuatorControl_ClampCommandPermille(
         command_permille
     );
 }
 
-static void Actuator_Timer_Init(void)
+static void ActuatorControl_TimerInit(void)
 {
     __HAL_RCC_TIM7_FORCE_RESET();
     __HAL_RCC_TIM7_RELEASE_RESET();
@@ -755,7 +825,7 @@ static void Actuator_Timer_Init(void)
     TIM7->ARR =
         (
             SystemCoreClock /
-            ACTUATOR_TIMER_HZ
+            ACTUATOR_CONTROL_TIMER_HZ
         ) -
         1U;
     TIM7->EGR = TIM_EGR_UG;
@@ -776,7 +846,7 @@ static void Actuator_Timer_Init(void)
         TIM_CR1_CEN;
 }
 
-static uint32_t Actuator_EnterCritical(void)
+static uint32_t ActuatorControl_EnterCritical(void)
 {
     const uint32_t interrupt_state =
         __get_PRIMASK();
@@ -786,7 +856,7 @@ static uint32_t Actuator_EnterCritical(void)
     return interrupt_state;
 }
 
-static void Actuator_ExitCritical(uint32_t interrupt_state)
+static void ActuatorControl_ExitCritical(uint32_t interrupt_state)
 {
     __set_PRIMASK(
         interrupt_state
@@ -802,5 +872,5 @@ void TIM7_DAC_IRQHandler(void)
 
     TIM7->SR &= (uint32_t)~TIM_SR_UIF;
 
-    Actuator_ProcessTick();
+    ActuatorControl_ProcessTick();
 }
