@@ -432,6 +432,27 @@ label {
 }
 
 @media (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
+  :root {
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --controller-gap: clamp(18px, 4dvw, 36px);
+    --controller-header: 50px;
+    --controller-pad-block: 12px;
+    --controller-pad-left: calc(16px + var(--safe-left));
+    --controller-pad-right: calc(16px + var(--safe-right));
+    --controller-pad-top: calc(var(--controller-pad-block) + var(--safe-top));
+    --controller-pad-bottom: calc(var(--controller-pad-block) + var(--safe-bottom));
+    --joystick-clearance: 24px;
+    --right-control-width: clamp(220px, 34dvw, 330px);
+    --joystick-size: min(
+      calc(100dvh - var(--controller-header) - var(--controller-pad-top) - var(--controller-pad-bottom) - var(--joystick-clearance)),
+      calc(100dvw - var(--controller-pad-left) - var(--controller-pad-right) - var(--right-control-width) - var(--controller-gap)),
+      430px
+    );
+  }
+
   body {
     overflow: hidden;
   }
@@ -439,8 +460,12 @@ label {
   header {
     flex-direction: row;
     align-items: center;
-    min-height: 54px;
-    padding: 8px 10px;
+    min-height: var(--controller-header);
+    padding:
+      calc(7px + var(--safe-top))
+      var(--controller-pad-right)
+      7px
+      var(--controller-pad-left);
   }
 
   .title-row {
@@ -472,7 +497,7 @@ label {
   button.emergency {
     width: auto;
     min-width: 132px;
-    min-height: 40px;
+    min-height: 36px;
     font-size: 12px;
   }
 
@@ -482,9 +507,13 @@ label {
       "fault"
       "controls";
     grid-template-rows: auto minmax(0, 1fr);
-    gap: 8px;
-    height: calc(100dvh - 54px);
-    padding: 8px;
+    gap: var(--controller-pad-block);
+    height: calc(100dvh - var(--controller-header));
+    padding:
+      var(--controller-pad-top)
+      var(--controller-pad-right)
+      var(--controller-pad-bottom)
+      var(--controller-pad-left);
     overflow: hidden;
   }
 
@@ -507,13 +536,14 @@ label {
   }
 
   .control-stack {
-    grid-template-columns: minmax(0, auto) minmax(190px, 1fr);
+    grid-template-columns: var(--joystick-size) minmax(0, var(--right-control-width));
     grid-template-areas:
       "stick run"
       "stick limits"
       "stick stop";
     grid-template-rows: minmax(0, 1fr) auto minmax(44px, 0.34fr);
-    gap: 8px;
+    justify-content: space-between;
+    gap: var(--controller-gap);
     overflow: hidden;
   }
 
@@ -542,7 +572,7 @@ label {
   }
 
   .joystick {
-    width: min(calc(100dvh - 80px), calc(100dvw - 232px), 430px);
+    width: var(--joystick-size);
     margin: 0;
   }
 
@@ -572,9 +602,28 @@ label {
 }
 
 @media (orientation: landscape) and (max-height: 430px) and (max-width: 900px) {
+  :root {
+    --controller-gap: clamp(12px, 3dvw, 26px);
+    --controller-header: 46px;
+    --controller-pad-block: 9px;
+    --controller-pad-left: calc(12px + var(--safe-left));
+    --controller-pad-right: calc(12px + var(--safe-right));
+    --joystick-clearance: 20px;
+    --right-control-width: clamp(190px, 34dvw, 280px);
+    --joystick-size: min(
+      calc(100dvh - var(--controller-header) - var(--controller-pad-top) - var(--controller-pad-bottom) - var(--joystick-clearance)),
+      calc(100dvw - var(--controller-pad-left) - var(--controller-pad-right) - var(--right-control-width) - var(--controller-gap)),
+      360px
+    );
+  }
+
   header {
-    min-height: 48px;
-    padding: 6px 8px;
+    min-height: var(--controller-header);
+    padding:
+      calc(6px + var(--safe-top))
+      var(--controller-pad-right)
+      6px
+      var(--controller-pad-left);
   }
 
   h1 {
@@ -600,9 +649,13 @@ label {
   }
 
   main {
-    height: calc(100dvh - 48px);
-    padding: 6px;
-    gap: 6px;
+    height: calc(100dvh - var(--controller-header));
+    padding:
+      var(--controller-pad-top)
+      var(--controller-pad-right)
+      var(--controller-pad-bottom)
+      var(--controller-pad-left);
+    gap: var(--controller-pad-block);
   }
 
   section {
@@ -625,9 +678,9 @@ label {
   }
 
   .control-stack {
-    grid-template-columns: minmax(0, auto) minmax(170px, 1fr);
+    grid-template-columns: var(--joystick-size) minmax(0, var(--right-control-width));
     grid-template-rows: minmax(0, 1fr) auto minmax(38px, 0.32fr);
-    gap: 6px;
+    gap: var(--controller-gap);
   }
 
   .button-grid,
@@ -636,6 +689,6 @@ label {
   }
 
   .joystick {
-    width: min(calc(100dvh - 64px), calc(100dvw - 200px), 360px);
+    width: var(--joystick-size);
   }
 }
