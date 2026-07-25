@@ -241,6 +241,11 @@ label {
   min-width: 0;
 }
 
+.joystick-block {
+  display: grid;
+  min-width: 0;
+}
+
 .joystick {
   position: relative;
   width: min(300px, 45vh, 78vw);
@@ -423,5 +428,214 @@ label {
   .button-grid,
   .state-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
+  body {
+    overflow: hidden;
+  }
+
+  header {
+    flex-direction: row;
+    align-items: center;
+    min-height: 54px;
+    padding: 8px 10px;
+  }
+
+  .title-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  h1 {
+    font-size: 18px;
+  }
+
+  .subline {
+    flex-wrap: nowrap;
+  }
+
+  .chip {
+    min-height: 22px;
+    padding: 2px 7px;
+    font-size: 11px;
+  }
+
+  button {
+    min-height: 38px;
+    padding: 7px 9px;
+    font-size: 13px;
+  }
+
+  button.emergency {
+    width: auto;
+    min-width: 132px;
+    min-height: 40px;
+    font-size: 12px;
+  }
+
+  main {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "fault"
+      "controls";
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 8px;
+    height: calc(100dvh - 54px);
+    padding: 8px;
+    overflow: hidden;
+  }
+
+  section {
+    padding: 10px;
+  }
+
+  h2 {
+    margin-bottom: 9px;
+    font-size: 13px;
+  }
+
+  .state-panel,
+  .events-panel {
+    display: none;
+  }
+
+  .fault-banner {
+    padding: 8px 10px;
+  }
+
+  .control-stack {
+    grid-template-columns: minmax(0, auto) minmax(190px, 1fr);
+    grid-template-areas:
+      "stick run"
+      "stick limits"
+      "stick stop";
+    grid-template-rows: minmax(0, 1fr) auto minmax(44px, 0.34fr);
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .motion-panel,
+  .command-panel,
+  .motion-subsection {
+    display: contents;
+  }
+
+  .motion-panel > h2,
+  .joystick-block h3 {
+    display: none;
+  }
+
+  .run-panel {
+    grid-area: run;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .joystick-block {
+    grid-area: stick;
+    align-self: center;
+    justify-self: start;
+  }
+
+  .joystick {
+    width: min(calc(100dvh - 80px), calc(100dvw - 232px), 430px);
+    margin: 0;
+  }
+
+  .limits {
+    grid-area: limits;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .button-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    min-height: 0;
+  }
+
+  .button-grid button {
+    height: 100%;
+  }
+
+  .wide {
+    grid-area: stop;
+    align-self: stretch;
+    height: 100%;
+    margin-top: 0;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 430px) and (max-width: 900px) {
+  header {
+    min-height: 48px;
+    padding: 6px 8px;
+  }
+
+  h1 {
+    font-size: 16px;
+  }
+
+  .chip {
+    min-height: 20px;
+    padding: 1px 6px;
+    font-size: 10px;
+  }
+
+  button {
+    min-height: 34px;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  button.emergency {
+    min-width: 118px;
+    min-height: 36px;
+    font-size: 11px;
+  }
+
+  main {
+    height: calc(100dvh - 48px);
+    padding: 6px;
+    gap: 6px;
+  }
+
+  section {
+    padding: 8px;
+  }
+
+  h2 {
+    margin-bottom: 7px;
+    font-size: 12px;
+  }
+
+  input {
+    padding: 6px;
+    font-size: 12px;
+  }
+
+  label {
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .control-stack {
+    grid-template-columns: minmax(0, auto) minmax(170px, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto minmax(38px, 0.32fr);
+    gap: 6px;
+  }
+
+  .button-grid,
+  .limits {
+    gap: 6px;
+  }
+
+  .joystick {
+    width: min(calc(100dvh - 64px), calc(100dvw - 200px), 360px);
   }
 }

@@ -499,35 +499,13 @@ button.holding {
 }
 
 @media (max-width: 1180px) {
-  main {
-    grid-template-columns: minmax(300px, 380px) minmax(520px, 1fr);
-    grid-template-areas:
-      "controls tuning"
-      "telemetry telemetry";
-    grid-template-rows: minmax(0, 1fr) minmax(220px, 32vh);
-  }
-
-  .controls-stack {
-    grid-area: controls;
-  }
-
-  .tuning-stack {
-    grid-area: tuning;
-  }
-
-  .telemetry-stack {
-    grid-area: telemetry;
-    grid-template-rows: minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 900px) {
   body {
     overflow: auto;
   }
 
   header {
-    align-items: flex-start;
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .title-row {
@@ -540,6 +518,7 @@ button.holding {
     height: auto;
     grid-template-columns: 1fr;
     grid-template-areas: none;
+    padding: 12px;
     overflow: visible;
   }
 
@@ -548,14 +527,45 @@ button.holding {
   }
 
   .controls-stack,
-  .tuning-stack,
   .telemetry-stack,
   .log-stack {
     grid-template-columns: 1fr;
     grid-template-rows: none;
   }
 
+  .tuning-stack {
+    display: contents;
+  }
+
+  .controls-stack {
+    order: 1;
+  }
+
+  .actuator-section {
+    order: 2;
+  }
+
+  .balance-section {
+    order: 3;
+  }
+
+  .telemetry-stack {
+    order: 4;
+  }
+
+  .log-stack {
+    order: 5;
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+  }
+
   .readout {
+    overflow: visible;
+  }
+
+  .motion-section,
+  .actuator-section,
+  .balance-section {
     overflow: visible;
   }
 
@@ -575,7 +585,57 @@ button.holding {
     grid-template-columns: 1fr;
   }
 
+  .matrix {
+    grid-template-columns: 42px repeat(6, minmax(0, 1fr));
+    gap: 5px;
+  }
+
   .log {
     min-height: 160px;
+  }
+}
+
+@media (max-width: 520px) {
+  main {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  section {
+    padding: 12px;
+  }
+
+  .panel-stack,
+  .command-panel,
+  .log-stack {
+    gap: 10px;
+  }
+
+  .grid,
+  .toolbar,
+  .telemetry-status {
+    grid-template-columns: 1fr;
+  }
+
+  .joystick {
+    width: min(260px, 78vw);
+  }
+
+  .matrix {
+    grid-template-columns: 34px repeat(6, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .matrix .head {
+    font-size: 10px;
+  }
+
+  .matrix input {
+    padding: 6px 4px;
+    font-size: 11px;
+  }
+
+  .telemetry-row {
+    grid-template-columns: minmax(96px, 1fr) minmax(0, 1fr);
   }
 }
