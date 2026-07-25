@@ -8,11 +8,13 @@
 </head>
 <body>
   <header>
-    <div>
-      <h1>SEBA Control</h1>
-      <div class="subline">
-        <span id="connection" class="chip muted">connecting</span>
-        <span id="mode" class="chip muted">stopped</span>
+    <div class="header-title">
+      <div class="title-row">
+        <h1>SEBA Control</h1>
+        <div class="subline">
+          <span id="connection" class="chip muted">connecting</span>
+          <span id="mode" class="chip muted">stopped</span>
+        </div>
       </div>
     </div>
     <button id="emergency_stop" class="emergency">Emergency Stop</button>
@@ -24,34 +26,41 @@
       <strong id="fault_text">none</strong>
     </section>
 
-    <section class="motion-panel">
-      <h2>Motion</h2>
-      <div id="joystick" class="joystick" aria-label="Motion joystick">
-        <div id="joystick_knob" class="joystick-knob"></div>
-      </div>
-      <div class="limits">
-        <label>Drive limit [m/s]
-          <input id="drive_speed" type="number" min="0" max="2" step="0.01" value="0.1">
-        </label>
-        <label>Turn limit [rad/s]
-          <input id="turn_speed" type="number" min="0" max="6" step="0.01" value="0.6">
-        </label>
-      </div>
-      <button id="motion_stop" class="danger wide">Stop Motion</button>
-    </section>
+    <div class="control-stack">
+      <section class="run-panel">
+        <h2>Run Control</h2>
+        <div class="button-grid">
+          <button id="balance_start" class="primary">Start Balance</button>
+          <button id="balance_stop">Stop Balance</button>
+          <button id="reset_stm32" class="danger full">Hold to Reset STM32</button>
+        </div>
+      </section>
+
+      <section class="motion-panel">
+        <h2>Motion Control</h2>
+        <div class="command-panel">
+          <div class="motion-subsection">
+            <h3>Joystick</h3>
+            <div id="joystick" class="joystick" aria-label="Motion joystick">
+              <div id="joystick_knob" class="joystick-knob"></div>
+            </div>
+            <div class="limits">
+              <label>Max drive speed [m/s]
+                <input id="drive_speed" type="number" min="0" max="2" step="0.01" value="0.1">
+              </label>
+              <label>Max turn speed [rad/s]
+                <input id="turn_speed" type="number" min="0" max="6" step="0.01" value="0.6">
+              </label>
+            </div>
+            <button id="motion_stop" class="danger wide">Stop Motion</button>
+          </div>
+        </div>
+      </section>
+    </div>
 
     <section class="state-panel">
       <h2>Robot State</h2>
       <div id="state_grid" class="state-grid"></div>
-    </section>
-
-    <section class="run-panel">
-      <h2>Run Control</h2>
-      <div class="button-grid">
-        <button id="balance_start" class="primary">Start Balance</button>
-        <button id="balance_stop">Stop Balance</button>
-        <button id="reset_stm32" class="danger">Hold Reset</button>
-      </div>
     </section>
 
     <section class="events-panel">
