@@ -6,6 +6,8 @@ The firmware runs on the STMicroelectronics NUCLEO-G474RE board using PlatformIO
 
 The STM32 firmware owns the real-time robot behavior. The Raspberry Pi software sends operator commands and displays telemetry, but it does not run the real-time balance loop or motor-safety logic.
 
+The firmware has been validated on the physical robot for stable self-balancing, forward-velocity tracking, yaw-rate control, and closed-loop motor-current regulation.
+
 ---
 
 ## 1. Firmware Overview

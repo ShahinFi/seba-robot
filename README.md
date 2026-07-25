@@ -4,6 +4,8 @@ SEBA-ROBOT is a two-wheeled self-balancing robot project for control, embedded s
 
 The current work covers the robot dynamics, balance and motion control, nonlinear simulation, built physical hardware, STM32 real-time firmware, and Raspberry Pi web control software.
 
+The physical robot has been implemented and validated with stable self-balancing, forward-velocity tracking, yaw-rate control, and closed-loop motor-current regulation.
+
 ---
 
 ## Current Implementation
