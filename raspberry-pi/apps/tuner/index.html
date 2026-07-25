@@ -8,66 +8,68 @@
 </head>
 <body>
   <header>
-    <h1>SEBA-ROBOT Live Tuner</h1>
-    <div id="connection" class="status">connecting</div>
+    <div class="header-title">
+      <div class="title-row">
+        <h1>SEBA Live Tuner</h1>
+        <div class="subline">
+          <span id="connection" class="chip muted">connecting</span>
+          <span id="mode" class="chip muted">stopped</span>
+        </div>
+      </div>
+    </div>
   </header>
 
   <main>
-    <div>
-      <section>
+    <div class="panel-stack controls-stack">
+      <section class="run-section">
         <h2>Run Control</h2>
         <div class="toolbar">
           <button id="balance_start" class="primary">Start Balance</button>
           <button id="balance_stop">Stop Balance</button>
-          <button id="actuator_stop" class="danger">Stop Actuator</button>
-          <button id="system_reset" class="danger">Reset STM32</button>
+          <button id="system_reset" class="danger full">Hold to Reset STM32</button>
         </div>
+      </section>
+
+      <section class="motion-section">
+        <h2>Motion Control</h2>
         <div class="command-panel">
-          <div id="joystick" class="joystick" aria-label="Motion joystick">
-            <div id="joystick_knob" class="joystick-knob"></div>
+          <div class="motion-subsection">
+            <h3>Joystick</h3>
+            <div id="joystick" class="joystick" aria-label="Motion joystick">
+              <div id="joystick_knob" class="joystick-knob"></div>
+            </div>
+            <div class="grid">
+              <label>Max drive speed [m/s]
+                <input id="drive_speed" type="number" min="0" max="2" step="0.01" value="0.1">
+              </label>
+              <label>Max turn speed [rad/s]
+                <input id="turn_speed" type="number" min="0" max="6" step="0.01" value="0.6">
+              </label>
+            </div>
           </div>
-          <div class="grid">
-            <label>Drive speed [m/s]
-              <input id="drive_speed" type="number" min="0" max="2" step="0.01" value="0.1">
-            </label>
-            <label>Turn speed [rad/s]
-              <input id="turn_speed" type="number" min="0" max="6" step="0.01" value="0.6">
-            </label>
+
+          <div class="motion-subsection">
+            <h3>Direct Command</h3>
+            <div class="grid">
+              <label>Forward velocity [m/s]
+                <input id="v_cmd" type="number" min="-2" max="2" step="0.01" value="0">
+              </label>
+              <label>Yaw rate [rad/s]
+                <input id="yaw_cmd" type="number" min="-6" max="6" step="0.01" value="0">
+              </label>
+              <button id="apply_motion" class="full">Apply Motion Command</button>
+              <button id="motion_stop" class="danger full">Stop Motion</button>
+            </div>
           </div>
-          <button id="motion_stop" class="danger full">Stop Motion</button>
         </div>
       </section>
 
-      <section>
-        <h2>Motion Command</h2>
-        <div class="grid">
-          <label>Forward velocity [m/s]
-            <input id="v_cmd" type="number" min="-2" max="2" step="0.01" value="0">
-          </label>
-          <label>Yaw rate [rad/s]
-            <input id="yaw_cmd" type="number" min="-6" max="6" step="0.01" value="0">
-          </label>
-          <button id="apply_motion" class="full">Apply Motion Command</button>
-        </div>
-      </section>
+    </div>
 
-      <section>
-        <h2>Balance Loop</h2>
-        <div class="grid">
-          <label>Gain scale [%]
-            <input id="gain_scale" type="number" min="0" max="10000" step="1" value="250">
-          </label>
-          <label>Max torque [mNm]
-            <input id="max_torque" type="number" min="0" max="10000" step="10" value="5000">
-          </label>
-          <button data-command-prefix="balance gain-scale" data-input-id="gain_scale">Apply Gain Scale</button>
-          <button data-command-prefix="balance max-torque" data-input-id="max_torque">Apply Max Torque</button>
-        </div>
-      </section>
-
-      <section>
-        <h2>Actuator Loop</h2>
-        <div class="grid">
+    <div class="panel-stack tuning-stack">
+      <section class="actuator-section">
+        <h2>Actuator Loop Settings</h2>
+        <div class="actuator-settings">
           <label>Kp [mV/A]
             <input id="act_kp" type="number" min="0" max="100000" step="100" value="3000">
           </label>
@@ -86,37 +88,44 @@
           <label>Torque constant [mNm/A]
             <input id="act_ktw" type="number" min="1" max="10000" step="10" value="1000">
           </label>
-          <button data-command-prefix="actuator kp" data-input-id="act_kp">Apply Kp</button>
-          <button data-command-prefix="actuator ki" data-input-id="act_ki">Apply Ki</button>
-          <button data-command-prefix="actuator max-current" data-input-id="act_max_current">Apply Max Current</button>
-          <button data-command-prefix="actuator max-pwm" data-input-id="act_max_pwm">Apply Max PWM</button>
-          <button data-command-prefix="actuator integral-limit" data-input-id="act_integral">Apply Integral</button>
-          <button data-command-prefix="actuator torque-constant" data-input-id="act_ktw">Apply Torque Constant</button>
+          <button id="apply_actuator_settings" class="panel-action full">Apply Actuator Control Settings</button>
         </div>
       </section>
-    </div>
 
-    <div>
-      <section>
-        <h2>Telemetry</h2>
-        <div class="readout" id="readout"></div>
-      </section>
-
-      <section>
-        <h2>RSLQR Gain Matrix</h2>
+      <section class="balance-section">
+        <h2>Balance Loop Settings</h2>
+        <div class="balance-settings">
+          <label>Gain scale [%]
+            <input id="gain_scale" type="number" min="0" max="10000" step="1" value="250">
+          </label>
+          <label>Max torque [mNm]
+            <input id="max_torque" type="number" min="0" max="10000" step="10" value="5000">
+          </label>
+        </div>
+        <div class="section-spacer"></div>
+        <h3>RSLQR Gain Matrix</h3>
         <div class="matrix" id="gain_matrix"></div>
         <div class="section-spacer"></div>
-        <button id="apply_gains">Apply All Gains</button>
+        <button id="apply_balance_loop" class="panel-action">Apply Balance Control Settings</button>
       </section>
 
-      <section>
-        <h2>Command Log</h2>
-        <div id="command_log" class="log"></div>
-      </section>
+      <div class="log-stack">
+        <details class="log-panel" open>
+          <summary>Command Log</summary>
+          <div id="command_log" class="log"></div>
+        </details>
 
-      <section>
-        <h2>STM Log</h2>
-        <div id="stm_log" class="log"></div>
+        <details class="log-panel" open>
+          <summary>STM Log</summary>
+          <div id="stm_log" class="log"></div>
+        </details>
+      </div>
+    </div>
+
+    <div class="panel-stack telemetry-stack">
+      <section class="telemetry-section">
+        <h2>Telemetry</h2>
+        <div class="readout" id="readout"></div>
       </section>
     </div>
   </main>

@@ -206,14 +206,17 @@ http://<raspberry-pi-ip>:8080/tuner
 The tuner provides live access to:
 
 - balance start and stop
-- actuator stop
-- motion commands
-- balance gain scale
-- maximum wheel torque
-- actuator current-loop gains
-- actuator current, PWM, integral, and torque-constant limits
-- RSLQR gain matrix entries
-- telemetry and STM32 event logs
+- STM32 hold-to-reset
+- joystick motion commands with maximum drive and turn speed limits
+- direct forward-velocity and yaw-rate commands
+- grouped actuator-loop configuration
+- grouped balance-loop configuration, including gain scale, torque limit, and RSLQR gain matrix
+- grouped telemetry display
+- command log and STM32 event log
+
+The tuner header shows the serial connection state and the current balance mode.
+
+The actuator settings are applied with one `actuator config ...` command. The balance-loop settings are applied with one `balance config ...` command. This keeps each apply action atomic from the web interface instead of sending one command per field.
 
 The tuner is used for development and parameter adjustment. The control panel is used for normal robot operation.
 

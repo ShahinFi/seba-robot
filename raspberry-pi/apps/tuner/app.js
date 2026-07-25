@@ -3,23 +3,55 @@
   [-2.0,  1.0, -2.8, -10.0, -1.2,  0.16]
 ];
 
-const metrics = [
-  "valid", "balance", "fault", "fall",
-  "fault_code", "fault_name",
-  "cmd_age", "cmd_count",
-  "imu", "imu_stale", "ori_age", "gyro_age",
-  "ori_count", "gyro_count",
-  "theta", "theta_dot", "theta_ddot", "v",
-  "left_T", "right_T", "left_dT", "right_dT",
-  "left_ref", "right_ref", "left_meas", "right_meas",
-  "left_pwm", "right_pwm", "gain", "max_T"
+const primaryMetrics = [
+  "valid", "balance", "fault_name", "fall"
+];
+
+const telemetryGroups = [
+  {
+    title: "State",
+    keys: ["theta", "theta_dot", "theta_ddot", "v", "v_dot", "psi_dot", "psi_ddot"]
+  },
+  {
+    title: "Command",
+    keys: ["v_cmd", "yaw_cmd", "cmd_age", "cmd_count"]
+  },
+  {
+    title: "Control",
+    keys: ["left_T", "right_T", "left_dT", "right_dT", "gain", "max_T"]
+  },
+  {
+    title: "Actuator",
+    keys: [
+      "act", "act_fault", "act_read_failed",
+      "left_ref", "right_ref",
+      "left_meas", "right_meas",
+      "left_err", "right_err",
+      "left_int", "right_int",
+      "left_pwm", "right_pwm"
+    ]
+  },
+  {
+    title: "Estimator",
+    keys: ["imu", "imu_stale", "enc", "updates"]
+  },
+  {
+    title: "IMU Reports",
+    keys: ["ori_age", "gyro_age", "ori_count", "gyro_count"]
+  },
+  {
+    title: "Fault",
+    keys: ["fault", "fault_code"]
+  }
 ];
 
 const joystickDeadband = 0.05;
 const joystickSendPeriodMs = 80;
+const resetHoldMs = 1500;
 
 let joystickCommand = {v: 0, yaw: 0};
 let joystickHoldTimer = null;
+let resetTimer = null;
 
 function writeLog(nodeId, text) {
   const node = document.getElementById(nodeId);
@@ -43,15 +75,47 @@ function logStm(text) {
   writeLog("stm_log", text);
 }
 
+function setChip(id, text, className) {
+  const node = document.getElementById(id);
+
+  node.textContent = text;
+  node.className = `chip ${className}`;
+}
+
 function buildReadout() {
   const readout = document.getElementById("readout");
   readout.innerHTML = "";
-  for (const key of metrics) {
+
+  const statusGrid = document.createElement("div");
+  statusGrid.className = "telemetry-status";
+
+  for (const key of primaryMetrics) {
     const box = document.createElement("div");
     box.className = "metric";
     box.innerHTML = `<span>${key}</span><strong id="m_${key}">-</strong>`;
-    readout.appendChild(box);
+    statusGrid.appendChild(box);
   }
+
+  const groupColumns = document.createElement("div");
+  groupColumns.className = "telemetry-groups";
+
+  for (const group of telemetryGroups) {
+    const section = document.createElement("div");
+    section.className = "telemetry-group";
+    section.innerHTML = `<h3>${group.title}</h3>`;
+
+    for (const key of group.keys) {
+      const row = document.createElement("div");
+      row.className = "telemetry-row";
+      row.innerHTML = `<span>${key}</span><strong id="m_${key}">-</strong>`;
+      section.appendChild(row);
+    }
+
+    groupColumns.appendChild(section);
+  }
+
+  readout.appendChild(statusGrid);
+  readout.appendChild(groupColumns);
 }
 
 function buildGainMatrix() {
@@ -115,11 +179,6 @@ async function sendCommand(command, options = {}) {
     }
     throw error;
   }
-}
-
-function sendValue(prefix, inputId) {
-  const value = document.getElementById(inputId).value;
-  return sendCommand(`${prefix} ${value}`);
 }
 
 function applyMotionCommand() {
@@ -268,13 +327,69 @@ function bindJoystick() {
   }
 }
 
-function resetStm32() {
-  return sendCommand("system reset");
-}
-
 function stopMotion() {
   centerJoystick(false);
   return sendCommand("balance command 0 0");
+}
+
+function applyActuatorSettings() {
+  const values = [
+    "act_kp",
+    "act_ki",
+    "act_max_current",
+    "act_max_pwm",
+    "act_integral",
+    "act_ktw"
+  ].map((inputId) => document.getElementById(inputId).value);
+
+  return sendCommand(`actuator config ${values.join(" ")}`);
+}
+
+function applyBalanceLoop() {
+  const values = [
+    document.getElementById("gain_scale").value,
+    document.getElementById("max_torque").value
+  ];
+
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < 6; col++) {
+      values.push(
+        document.getElementById(`gain_${row}_${col}`).value
+      );
+    }
+  }
+
+  return sendCommand(`balance config ${values.join(" ")}`);
+}
+
+function bindResetHold() {
+  const button = document.getElementById("system_reset");
+
+  function cancelReset() {
+    if (resetTimer !== null) {
+      window.clearTimeout(resetTimer);
+      resetTimer = null;
+    }
+
+    button.classList.remove("holding");
+  }
+
+  button.addEventListener("pointerdown", () => {
+    if (resetTimer !== null) {
+      return;
+    }
+
+    button.classList.add("holding");
+    resetTimer = window.setTimeout(() => {
+      resetTimer = null;
+      button.classList.remove("holding");
+      sendCommand("system reset");
+    }, resetHoldMs);
+  });
+
+  for (const eventName of ["pointerup", "pointerleave", "pointercancel"]) {
+    button.addEventListener(eventName, cancelReset);
+  }
 }
 
 function bindControls() {
@@ -284,36 +399,19 @@ function bindControls() {
   document.getElementById("balance_stop")
     .addEventListener("click", () => sendCommand("balance stop"));
 
-  document.getElementById("actuator_stop")
-    .addEventListener("click", () => sendCommand("actuator stop"));
-
-  document.getElementById("system_reset")
-    .addEventListener("click", resetStm32);
-
   document.getElementById("motion_stop")
     .addEventListener("click", stopMotion);
 
   document.getElementById("apply_motion")
     .addEventListener("click", applyMotionCommand);
 
-  document.getElementById("apply_gains")
-    .addEventListener("click", applyAllGains);
+  document.getElementById("apply_actuator_settings")
+    .addEventListener("click", applyActuatorSettings);
 
-  for (const button of document.querySelectorAll("[data-command-prefix]")) {
-    button.addEventListener("click", () => {
-      sendValue(button.dataset.commandPrefix, button.dataset.inputId);
-    });
-  }
-}
+  document.getElementById("apply_balance_loop")
+    .addEventListener("click", applyBalanceLoop);
 
-async function applyAllGains() {
-  for (let row = 0; row < 2; row++) {
-    const side = row === 0 ? "left" : "right";
-    for (let col = 0; col < 6; col++) {
-      const value = document.getElementById(`gain_${row}_${col}`).value;
-      await sendCommand(`balance gain ${side} ${col} ${value}`);
-    }
-  }
+  bindResetHold();
 }
 
 let telemetryPollActive = false;
@@ -325,12 +423,26 @@ async function pollTelemetry() {
   }
 
   telemetryPollActive = true;
-  const status = document.getElementById("connection");
 
   try {
     const data = await api("/api/telemetry");
-    status.textContent = "connected";
-    status.className = "status ok";
+    setChip(
+      "connection",
+      data.stale ? "stale" : "connected",
+      data.stale ? "warn" : "ok"
+    );
+
+    const faultActive =
+      Number(data.telemetry.fault) !== 0;
+    const balanceActive =
+      Number(data.telemetry.balance) !== 0;
+
+    setChip(
+      "mode",
+      faultActive ? "faulted" : (balanceActive ? "balancing" : "stopped"),
+      faultActive ? "bad" : (balanceActive ? "ok" : "muted")
+    );
+
     if (
       data.command &&
       data.command.ack &&
@@ -346,7 +458,7 @@ async function pollTelemetry() {
       }
     }
 
-    for (const key of metrics) {
+    for (const key of [...primaryMetrics, ...telemetryGroups.flatMap((group) => group.keys)]) {
       const node = document.getElementById(`m_${key}`);
       if (
         node &&
@@ -357,8 +469,7 @@ async function pollTelemetry() {
       }
     }
   } catch (error) {
-    status.textContent = error.message;
-    status.className = "status bad";
+    setChip("connection", error.message, "bad");
   } finally {
     telemetryPollActive = false;
   }
