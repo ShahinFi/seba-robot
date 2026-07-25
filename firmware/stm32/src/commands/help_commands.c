@@ -62,6 +62,10 @@ CommandResult HelpCommands_Print(void)
     );
 
     Serial_WriteLine(
+        "  actuator config <kp> <ki> <max_mA> <max_pwm> <int_mV> <ktw>"
+    );
+
+    Serial_WriteLine(
         "  actuator kp <mV_per_A>"
     );
 
@@ -123,6 +127,10 @@ CommandResult HelpCommands_Print(void)
 
     Serial_WriteLine(
         "  balance gain <left|right> <0...5> <value>"
+    );
+
+    Serial_WriteLine(
+        "  balance config <gain_percent> <max_mNm> <12 gains>"
     );
 
     Serial_WriteLine(

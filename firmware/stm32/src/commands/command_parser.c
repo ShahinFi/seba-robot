@@ -19,13 +19,13 @@ int CommandParser_Tokenize(
     char *token =
         strtok(line, " \t");
 
-    while (
-        token != NULL &&
-        argument_count < maximum_arguments
-    )
+    while (token != NULL)
     {
-        arguments[argument_count] =
-            token;
+        if (argument_count < maximum_arguments)
+        {
+            arguments[argument_count] =
+                token;
+        }
 
         argument_count++;
 

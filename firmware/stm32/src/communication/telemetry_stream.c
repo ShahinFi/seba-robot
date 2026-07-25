@@ -125,6 +125,12 @@ void TelemetryStream_WriteSnapshot(void)
     Serial_Write(" act=");
     Serial_Write(actuator.enabled ? "1" : "0");
 
+    Serial_Write(" act_fault=");
+    Serial_Write(actuator.fault_active ? "1" : "0");
+
+    Serial_Write(" act_read_failed=");
+    Serial_Write(actuator.read_failed ? "1" : "0");
+
     Serial_Write(" left_ref=");
     Serial_WriteInt32(actuator.left_current_reference_ma);
 
@@ -136,6 +142,18 @@ void TelemetryStream_WriteSnapshot(void)
 
     Serial_Write(" right_meas=");
     Serial_WriteInt32(actuator.right_current_measured_ma);
+
+    Serial_Write(" left_err=");
+    Serial_WriteInt32(actuator.left_error_ma);
+
+    Serial_Write(" right_err=");
+    Serial_WriteInt32(actuator.right_error_ma);
+
+    Serial_Write(" left_int=");
+    Serial_WriteInt32(actuator.left_integral_mv);
+
+    Serial_Write(" right_int=");
+    Serial_WriteInt32(actuator.right_integral_mv);
 
     Serial_Write(" left_pwm=");
     Serial_WriteInt32(actuator.left_command_permille);

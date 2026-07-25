@@ -11,6 +11,10 @@
 #include <string.h>
 
 static void BalanceCommands_PrintStatus(void);
+static CommandResult BalanceCommands_ApplyConfig(
+    int argument_count,
+    char *arguments[]
+);
 static bool BalanceCommands_StateAllowsStart(
     const RobotState *state,
     const ControlParameters *parameters
@@ -31,6 +35,17 @@ CommandResult BalanceCommands_Handle(
     uint32_t row;
     float float_value;
     float second_float_value;
+
+    if (
+        argument_count == 17 &&
+        strcmp(arguments[1], "config") == 0
+    )
+    {
+        return BalanceCommands_ApplyConfig(
+            argument_count,
+            arguments
+        );
+    }
 
     if (
         argument_count == 3 &&
@@ -199,7 +214,7 @@ CommandResult BalanceCommands_Handle(
     if (argument_count != 2)
     {
         Serial_WriteLine(
-            "ERROR: usage: balance <start|stop|status> OR balance max-torque <mNm> OR balance gain-scale <percent> OR balance command <v> <yaw> OR balance gain <left|right> <0...5> <value>"
+            "ERROR: usage: balance <start|stop|status> OR balance max-torque <mNm> OR balance gain-scale <percent> OR balance command <v> <yaw> OR balance gain <left|right> <0...5> <value> OR balance config <gain_percent> <max_mNm> <12 gains>"
         );
 
         return COMMAND_RESULT_ERROR;
@@ -283,10 +298,121 @@ CommandResult BalanceCommands_Handle(
     }
 
     Serial_WriteLine(
-        "ERROR: usage: balance <start|stop|status> OR balance max-torque <mNm> OR balance gain-scale <percent> OR balance command <v> <yaw> OR balance gain <left|right> <0...5> <value>"
+        "ERROR: usage: balance <start|stop|status> OR balance max-torque <mNm> OR balance gain-scale <percent> OR balance command <v> <yaw> OR balance gain <left|right> <0...5> <value> OR balance config <gain_percent> <max_mNm> <12 gains>"
     );
 
     return COMMAND_RESULT_ERROR;
+}
+
+static CommandResult BalanceCommands_ApplyConfig(
+    int argument_count,
+    char *arguments[]
+)
+{
+    int32_t gain_percent;
+    int32_t max_torque_mnm;
+    float gains[2][6];
+    uint32_t row;
+    uint32_t column;
+
+    if (argument_count != 17)
+    {
+        Serial_WriteLine(
+            "ERROR: usage: balance config <gain_percent> <max_mNm> <12 gains>"
+        );
+
+        return COMMAND_RESULT_ERROR;
+    }
+
+    if (
+        !CommandParser_ParseInt32(
+            arguments[2],
+            0,
+            10000,
+            &gain_percent
+        ) ||
+        !CommandParser_ParseInt32(
+            arguments[3],
+            0,
+            10000,
+            &max_torque_mnm
+        )
+    )
+    {
+        Serial_WriteLine(
+            "ERROR: balance config limits must be 0 to 10000."
+        );
+
+        return COMMAND_RESULT_ERROR;
+    }
+
+    for (row = 0U; row < 2U; row++)
+    {
+        for (column = 0U; column < 6U; column++)
+        {
+            if (!CommandParser_ParseFloat(
+                    arguments[4 + (int)(row * 6U + column)],
+                    -100000.0F,
+                    100000.0F,
+                    &gains[row][column]
+                ))
+            {
+                Serial_WriteLine(
+                    "ERROR: balance config gains must be numeric."
+                );
+
+                return COMMAND_RESULT_ERROR;
+            }
+        }
+    }
+
+    if (!MotionControl_SetGainScale(
+            (float)gain_percent /
+            100.0F
+        ))
+    {
+        Serial_WriteLine(
+            "ERROR: balance gain scale update failed."
+        );
+
+        return COMMAND_RESULT_ERROR;
+    }
+
+    if (!MotionControl_SetMaxWheelTorque(
+            (float)max_torque_mnm
+        ))
+    {
+        Serial_WriteLine(
+            "ERROR: balance max torque update failed."
+        );
+
+        return COMMAND_RESULT_ERROR;
+    }
+
+    for (row = 0U; row < 2U; row++)
+    {
+        for (column = 0U; column < 6U; column++)
+        {
+            if (!MotionControl_SetGain(
+                    row,
+                    column,
+                    gains[row][column]
+                ))
+            {
+                Serial_WriteLine(
+                    "ERROR: balance gain update failed."
+                );
+
+                return COMMAND_RESULT_ERROR;
+            }
+        }
+    }
+
+    Serial_WriteLine(
+        "OK: balance config updated."
+    );
+
+    return COMMAND_RESULT_OK;
 }
 
 static void BalanceCommands_PrintStatus(void)

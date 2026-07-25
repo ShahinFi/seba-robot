@@ -10,6 +10,10 @@
 
 static void ActuatorCommands_PrintConfig(void);
 static void ActuatorCommands_PrintStatus(void);
+static CommandResult ActuatorCommands_ApplyConfig(
+    int argument_count,
+    char *arguments[]
+);
 
 CommandResult ActuatorCommands_Handle(
     int argument_count,
@@ -19,6 +23,17 @@ CommandResult ActuatorCommands_Handle(
     int32_t value;
     int32_t second_value;
     ActuatorControlStatus status;
+
+    if (
+        argument_count == 8 &&
+        strcmp(arguments[1], "config") == 0
+    )
+    {
+        return ActuatorCommands_ApplyConfig(
+            argument_count,
+            arguments
+        );
+    }
 
     if (argument_count == 2)
     {
@@ -356,10 +371,100 @@ CommandResult ActuatorCommands_Handle(
     }
 
     Serial_WriteLine(
-        "ERROR: usage: actuator <left|right> <mA>, actuator both <left_mA> <right_mA>, actuator torque <left_mNm> <right_mNm>, actuator stop, actuator status, actuator config"
+        "ERROR: usage: actuator <left|right> <mA>, actuator both <left_mA> <right_mA>, actuator torque <left_mNm> <right_mNm>, actuator stop, actuator status, actuator config, actuator config <kp> <ki> <max_mA> <max_pwm> <int_mV> <ktw>"
     );
 
     return COMMAND_RESULT_ERROR;
+}
+
+static CommandResult ActuatorCommands_ApplyConfig(
+    int argument_count,
+    char *arguments[]
+)
+{
+    int32_t kp_mv_per_a;
+    int32_t ki_mv_per_a_s;
+    int32_t max_current_ma;
+    int32_t max_pwm_percent;
+    int32_t integral_limit_mv;
+    int32_t torque_constant_mnm_per_a;
+
+    if (argument_count != 8)
+    {
+        Serial_WriteLine(
+            "ERROR: usage: actuator config <kp> <ki> <max_mA> <max_pwm> <int_mV> <ktw>"
+        );
+
+        return COMMAND_RESULT_ERROR;
+    }
+
+    if (
+        !CommandParser_ParseInt32(
+            arguments[2],
+            0,
+            100000L,
+            &kp_mv_per_a
+        ) ||
+        !CommandParser_ParseInt32(
+            arguments[3],
+            0,
+            100000L,
+            &ki_mv_per_a_s
+        ) ||
+        !CommandParser_ParseInt32(
+            arguments[4],
+            0,
+            10000L,
+            &max_current_ma
+        ) ||
+        !CommandParser_ParseInt32(
+            arguments[5],
+            0,
+            100,
+            &max_pwm_percent
+        ) ||
+        !CommandParser_ParseInt32(
+            arguments[6],
+            0,
+            20000L,
+            &integral_limit_mv
+        ) ||
+        !CommandParser_ParseInt32(
+            arguments[7],
+            1,
+            10000L,
+            &torque_constant_mnm_per_a
+        )
+    )
+    {
+        Serial_WriteLine(
+            "ERROR: actuator config values are out of range."
+        );
+
+        return COMMAND_RESULT_ERROR;
+    }
+
+    if (
+        !ActuatorControl_SetProportionalGain(kp_mv_per_a) ||
+        !ActuatorControl_SetIntegralGain(ki_mv_per_a_s) ||
+        !ActuatorControl_SetMaxCurrentReference(max_current_ma) ||
+        !ActuatorControl_SetMaxCommandPercent((int16_t)max_pwm_percent) ||
+        !ActuatorControl_SetIntegralLimit(integral_limit_mv) ||
+        !ActuatorControl_SetWheelTorqueConstant(torque_constant_mnm_per_a)
+    )
+    {
+        Serial_WriteLine(
+            "ERROR: actuator config update failed."
+        );
+
+        return COMMAND_RESULT_ERROR;
+    }
+
+    Serial_WriteLine(
+        "OK: actuator config updated."
+    );
+
+    return COMMAND_RESULT_OK;
 }
 
 static void ActuatorCommands_PrintConfig(void)

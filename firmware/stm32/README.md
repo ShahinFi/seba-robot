@@ -171,6 +171,8 @@ The serial interface uses:
 
 Command lines end with carriage return, line feed, or both. Non-printable input bytes are ignored except for carriage return, line feed, and backspace.
 
+The command dispatcher accepts enough command tokens for the grouped `balance config` command. Extra tokens are counted and rejected by the command handlers instead of being silently truncated.
+
 Direct console commands are plain text:
 
 ```text
@@ -269,6 +271,7 @@ Motor commands are manual bring-up commands. They bypass balance control and act
 | `actuator stop` | Stops actuator current control and disables motor output. |
 | `actuator status` | Prints actuator enable state, fault state, current references, measured currents, errors, integrator values, and PWM commands. |
 | `actuator config` | Prints actuator control period, battery voltage, current gains, limits, and torque constant. |
+| `actuator config <kp> <ki> <max_mA> <max_pwm> <int_mV> <ktw>` | Atomically applies the actuator current-loop gains, current limit, PWM limit, integral limit, and torque constant. |
 | `actuator kp <mV_per_A>` | Sets the proportional current-control gain. |
 | `actuator ki <mV_per_A_s>` | Sets the integral current-control gain. |
 | `actuator battery <mV>` | Sets the battery voltage used to convert controller voltage to PWM command. |
@@ -277,6 +280,8 @@ Motor commands are manual bring-up commands. They bypass balance control and act
 | `actuator integral-limit <mV>` | Sets the actuator current-loop integral limit. |
 | `actuator period <ms>` | Sets the actuator control period. |
 | `actuator torque-constant <mNm_per_A>` | Sets the wheel-side torque constant used to convert torque reference to current reference. |
+
+The grouped `actuator config` command is used by the Raspberry Pi tuner so one apply action updates the complete actuator-loop configuration as one command.
 
 ### 6.7 Balance Commands
 
@@ -289,8 +294,11 @@ Motor commands are manual bring-up commands. They bypass balance control and act
 | `balance gain-scale <percent>` | Sets the multiplier applied to the RSLQR gain matrix. |
 | `balance command <v_mps> <yaw_rate_rads>` | Sets the commanded forward velocity and yaw rate. |
 | `balance gain <left|right> <0...5> <value>` | Sets one RSLQR gain entry for the left or right torque-rate row. |
+| `balance config <gain_percent> <max_mNm> <12 gains>` | Atomically applies the gain scale, wheel torque limit, and full 2x6 RSLQR gain matrix. |
 
 Calling `balance start` while balance control is already running does not restart the controller state.
+
+The grouped `balance config` command is used by the Raspberry Pi tuner so one apply action updates the complete balance-loop configuration as one command.
 
 ### 6.8 Telemetry and System Commands
 
@@ -361,10 +369,16 @@ TEL valid=... imu=... imu_stale=... enc=... ...
 | Field | Meaning |
 |---|---|
 | `act` | Actuator-control enable state. |
+| `act_fault` | Actuator-control fault-active state. |
+| `act_read_failed` | Current-sensor read failure state. |
 | `left_ref` | Left motor current reference in mA. |
 | `right_ref` | Right motor current reference in mA. |
 | `left_meas` | Left measured motor current in mA. |
 | `right_meas` | Right measured motor current in mA. |
+| `left_err` | Left current-control error in mA. |
+| `right_err` | Right current-control error in mA. |
+| `left_int` | Left current-loop integrator state in mV. |
+| `right_int` | Right current-loop integrator state in mV. |
 | `left_pwm` | Left signed PWM command in per-mille. |
 | `right_pwm` | Right signed PWM command in per-mille. |
 

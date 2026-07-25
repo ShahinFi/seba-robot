@@ -15,7 +15,7 @@
 
 #include <string.h>
 
-#define COMMAND_DISPATCHER_MAX_ARGUMENTS  5
+#define COMMAND_DISPATCHER_MAX_ARGUMENTS  18
 
 /*
  * Top-level command words are stable public serial commands.
