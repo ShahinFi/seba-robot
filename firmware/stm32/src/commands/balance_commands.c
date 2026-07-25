@@ -366,6 +366,10 @@ static CommandResult BalanceCommands_ApplyConfig(
         }
     }
 
+    /*
+     * Parse the complete gain matrix before writing live motion
+     * controller settings.
+     */
     if (!MotionControl_SetGainScale(
             (float)gain_percent /
             100.0F

@@ -444,6 +444,10 @@ static CommandResult ActuatorCommands_ApplyConfig(
         return COMMAND_RESULT_ERROR;
     }
 
+    /*
+     * Validate the complete grouped command before writing live
+     * actuator settings.
+     */
     if (
         !ActuatorControl_SetProportionalGain(kp_mv_per_a) ||
         !ActuatorControl_SetIntegralGain(ki_mv_per_a_s) ||

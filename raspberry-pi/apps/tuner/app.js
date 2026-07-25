@@ -333,6 +333,10 @@ function stopMotion() {
 }
 
 function applyActuatorSettings() {
+  /*
+   * The tuner applies actuator settings as one STM32 command so one button
+   * press maps to one acknowledged protocol transaction.
+   */
   const values = [
     "act_kp",
     "act_ki",
@@ -346,6 +350,10 @@ function applyActuatorSettings() {
 }
 
 function applyBalanceLoop() {
+  /*
+   * The balance apply button sends the gain scale, torque limit, and complete
+   * RSLQR matrix together so the controller is not tuned one field at a time.
+   */
   const values = [
     document.getElementById("gain_scale").value,
     document.getElementById("max_torque").value

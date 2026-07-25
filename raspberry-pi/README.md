@@ -187,6 +187,8 @@ The control panel provides:
 - fault banner
 - STM32 event log
 
+On desktop and portrait mobile screens, the control panel uses a stacked responsive layout. On phone-sized landscape screens, it switches to a controller-style layout: the joystick fills the left side, while balance start and stop, STM32 reset, speed limits, and stop motion stay on the right side.
+
 Joystick commands are sent repeatedly while the joystick is held away from center. When the joystick is released, the command returns to zero.
 
 ### 6.2 Engineering Tuner
@@ -215,6 +217,8 @@ The tuner provides live access to:
 - command log and STM32 event log
 
 The tuner header shows the serial connection state and the current balance mode.
+
+The tuner uses a wide three-column layout on desktop screens. Below the wide-screen breakpoint, sections stack vertically in this order: run and motion controls, actuator settings, balance settings, telemetry, and logs.
 
 The actuator settings are applied with one `actuator config ...` command. The balance-loop settings are applied with one `balance config ...` command. This keeps each apply action atomic from the web interface instead of sending one command per field.
 
