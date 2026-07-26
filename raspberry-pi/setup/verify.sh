@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 
-set -eu
+set -u
 
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 . "$SCRIPT_DIR/common.sh"
+
+# Verification checks intentionally return nonzero so all failures can be
+# collected and reported together.
+set +e
 
 CLOUD_INIT_DISABLE_FILE="/etc/cloud/cloud.cfg.d/99-disable-network-config.cfg"
 failures=""
