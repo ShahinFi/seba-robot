@@ -162,6 +162,144 @@ Positive derivatives indicate increasing values of the corresponding coordinates
 
 The symbol $W$ is used for wheel separation to avoid confusion with the differential operator $d/dt$.
 
+### 3.1 Physical Parameter Values
+
+The model uses measured robot values where direct measurement is practical, datasheet values for motor and battery properties, calculated values when they follow from measured quantities, and engineering estimates only for quantities that cannot be directly measured from the assembled robot without a dedicated inertia or friction test.
+
+| Parameter | Value | Source |
+|---|---:|---|
+| $m_p$ | `2.320 kg` | calculated from total mass minus measured wheel masses |
+| $m_w$ | `0.040 kg` | measured wheel mass |
+| $l_p$ | `0.1112 m` | calculated from measured body COM height and wheel radius |
+| $r_w$ | `0.0325 m` | calculated from measured wheel diameter |
+| $W$ | `0.250 m` | measured wheel center-to-center separation |
+| $I_{px}$ | `0.0231 kg*m^2` | calculated engineering estimate from measured COM and mass placement |
+| $I_{py}$ | `0.0153 kg*m^2` | calculated engineering estimate from measured COM and mass placement |
+| $I_{pz}$ | `0.0158 kg*m^2` | calculated engineering estimate from measured COM and mass placement |
+| $I_w$ | `3.0e-5 kg*m^2` | calculated from measured wheel mass and radius using wheel mass distribution |
+| $J_w$ | `2.0e-5 kg*m^2` | calculated from measured wheel mass and radius using wheel geometry |
+| $c$ | `0.003 N*m*s/rad` | estimated from motor no-load current and no-load speed |
+| $g$ | `9.81 m/s^2` | standard gravitational acceleration |
+
+The total robot mass is `2.400 kg`. With two measured `0.040 kg` wheels, the body mass used by the model is:
+
+```math
+m_p
+=
+2.400
+-
+2(0.040)
+=
+2.320\ \mathrm{kg}
+```
+
+The measured total center of mass is `0.140 m` above the ground. Removing the two wheel masses gives a body center of mass of `0.1437 m` above the ground. Since the wheel axle is at the wheel radius, the model center-of-mass distance is:
+
+```math
+l_p
+=
+0.1437
+-
+0.0325
+=
+0.1112\ \mathrm{m}
+```
+
+The body inertia values are computed with the parallel-axis theorem:
+
+```math
+I_{\mathrm{axis}}
+=
+\sum_i
+\left(
+I_{i,\mathrm{local}}
++
+m_i d_i^2
+\right)
+```
+
+The battery and motors are treated as separate dominant masses at their measured locations. The remaining mass is solved from the measured total center of mass and then assigned to the remaining frame, electronics, wiring, and structure. This avoids treating the full robot as a uniform box, which would be inaccurate because the frame is light and the motors and battery dominate the mass distribution.
+
+### 3.2 Motor and Actuator Constants
+
+The actuator constants are derived from the motor datasheet values for the `GB37Y3530-12V-251R` geared DC motor assembly.
+
+| Quantity | Value | Source |
+|---|---:|---|
+| rated voltage | `12 V` | datasheet |
+| gear ratio $N$ | `43.8` | datasheet |
+| no-load output speed | `251 rpm = 26.3 rad/s` | datasheet, converted |
+| no-load current | `0.350 A` | datasheet |
+| stall current | `7.0 A` | datasheet |
+| stall output torque | `18 kg*cm = 1.765 N*m` | datasheet, converted |
+| motor resistance | `1.71 ohm` | calculated from stall current |
+| motor-side $K_{t,m}$ | `0.00990 N*m/A` | calculated from no-load speed and current |
+| motor-side $K_{e,m}$ | `0.00990 V*s/rad` | calculated from no-load speed and current |
+| gearbox efficiency | approximately `0.60` | calculated from ideal and datasheet output torque |
+| wheel-side $K_{t,w}$ | approximately `260 mNm/A` | calculated from stall torque and current above no-load current |
+
+The motor terminal resistance is estimated from stall current:
+
+```math
+R_m
+=
+\frac{12}{7.0}
+=
+1.71\ \Omega
+```
+
+The no-load output speed is converted to motor-side angular speed:
+
+```math
+\omega_{0,m}
+=
+251
+\frac{2\pi}{60}
+(43.8)
+=
+1151.3\ \mathrm{rad/s}
+```
+
+The motor-side back-EMF constant is:
+
+```math
+K_{e,m}
+=
+\frac{
+12 - (0.350)(1.71)
+}{
+1151.3
+}
+=
+0.00990\ \mathrm{V\,s/rad}
+```
+
+In SI units, $K_{t,m}=K_{e,m}$, so:
+
+```math
+K_{t,m}
+=
+0.00990\ \mathrm{N\,m/A}
+```
+
+The effective wheel-side torque constant is calculated from datasheet stall torque using current above no-load current:
+
+```math
+K_{t,w}
+=
+\frac{
+1.765
+}{
+7.0 - 0.350
+}
+=
+0.265\ \mathrm{N\,m/A}
+\approx
+260\ \mathrm{mN\,m/A}
+```
+
+This effective wheel-side constant is the value used by the actuator-control layer to convert wheel torque references into motor current references.
+
 ---
 
 ## 4. Robot Rigid-Body Dynamics

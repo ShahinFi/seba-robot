@@ -500,16 +500,16 @@ Default motion-control values:
 
 | Parameter | Value |
 |---|---:|
-| maximum wheel torque | `5000 mNm` |
+| maximum wheel torque | `1300 mNm` |
 | fall angle | `1.047197551 rad` |
 | motion command timeout | `300 ms` |
-| gain scale | `2.5` |
+| gain scale | `1.0` |
 
 Default RSLQR gain matrix:
 
 ```text
-left  = [-2, -1, -2.8, -10, -1.2, -0.16]
-right = [-2,  1, -2.8, -10, -1.2,  0.16]
+left  = [-2, -1, -2.3, -8, -0.7, -0.16]
+right = [-2,  1, -2.3, -8, -0.7,  0.16]
 ```
 
 ### 9.2 Actuator Control
@@ -538,7 +538,7 @@ Default actuator values:
 | integral limit | `3000 mV` |
 | maximum current reference | `5000 mA` |
 | maximum PWM command | `100%` |
-| wheel torque constant | `1000 mNm/A` |
+| wheel torque constant | `260 mNm/A` |
 
 The actuator disables itself if current readings fail or if either current sensor reports a fault.
 
@@ -654,15 +654,15 @@ Current physical and timing values:
 
 | Parameter | Value |
 |---|---:|
-| body mass | `2.90 kg` |
-| wheel radius | `0.035 m` |
-| wheel separation | `0.10 m` |
-| body center-of-mass height | `0.125 m` |
-| body pitch inertia | `0.01752 kg*m^2` |
-| body yaw inertia | `0.00483 kg*m^2` |
-| wheel pitch inertia | `3.0625e-5 kg*m^2` |
-| wheel yaw inertia | `1.90625e-5 kg*m^2` |
-| wheel damping | `0.0005 N*m*s/rad` |
+| body mass | `2.32 kg` |
+| wheel radius | `0.0325 m` |
+| wheel separation | `0.25 m` |
+| body center-of-mass height above wheel axle | `0.1112 m` |
+| body pitch inertia | `0.0153 kg*m^2` |
+| body yaw inertia | `0.0158 kg*m^2` |
+| wheel pitch inertia | `3.0e-5 kg*m^2` |
+| wheel yaw inertia | `2.0e-5 kg*m^2` |
+| wheel damping | `0.003 N*m*s/rad` |
 | encoder counts per wheel revolution | `2800` |
 | state estimator rate | `200 Hz` |
 | motion controller rate | `200 Hz` |

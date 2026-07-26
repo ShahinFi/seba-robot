@@ -67,6 +67,26 @@ The complete power system, including the battery, protection, regulator, supply 
 
 ## 2. Main Components
 
+### Physical measurements
+
+The following dimensions and masses describe the built robot. These values are measured from the physical robot unless marked as a datasheet value.
+
+| Quantity | Value | Source |
+|---|---:|---|
+| total robot mass | `2.400 kg` | measured |
+| wheel mass | `0.040 kg` each | measured |
+| wheel diameter | `0.065 m` | measured |
+| wheel center-to-center separation | `0.250 m` | measured |
+| total center-of-mass height from ground | `0.140 m` | measured |
+| center of mass in forward direction | approximately on the wheel-axle line | measured |
+| battery center height from ground | `0.130 m` | measured |
+| battery lateral offset from robot centerline | `0.060 m` right | measured |
+| motor center height from ground | `0.039 m` | measured |
+| frame dimensions, front-back x side-side x height | `0.160 m x 0.180 m x 0.230 m` | measured |
+| frame bottom height from ground | `0.185 m` | measured |
+
+These values are the physical basis for the rigid-body parameters in the [control model](../control/README.md#31-physical-parameter-values).
+
 ### Real-time controller
 
 - STMicroelectronics NUCLEO-G474RE
@@ -110,6 +130,7 @@ GB37Y3530-12V-251R
 
 Relevant specifications:
 
+- mass: approximately 205 g each
 - rated voltage: 12 V
 - gear ratio: 43.8:1
 - no-load speed: 251 rpm ±10%
@@ -142,8 +163,11 @@ One sensor measures the left motor current and one measures the right motor curr
 
 - 3S LiPo battery
 - nominal voltage: 11.1 V
+- full-charge voltage: 12.6 V
 - capacity: 5000 mAh
 - discharge rating: 50C
+- mass: approximately 370 g
+- dimensions: approximately 138 mm x 47 mm x 35 mm
 - XT60 battery connection
 - 20 A fuse
 - main power button
@@ -722,4 +746,3 @@ Each motor assembly contains:
 The motor-power and encoder cables run between the motors and Layer 2.
 
 The motor-power conductors and encoder conductors are connected separately.
-
