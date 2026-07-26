@@ -11,7 +11,7 @@ Environment=PYTHONUNBUFFERED=1
 Environment=SEBA_SERIAL=@SERIAL_PORT@
 Environment=SEBA_WEB_HOST=0.0.0.0
 Environment=SEBA_WEB_PORT=@WEB_PORT@
-ExecStart=@PYTHON@ @REPO_DIR@/raspberry-pi/server.py
+ExecStart=@PYTHON@ @REPO_DIR@/raspberry-pi/web/server.py
 Restart=on-failure
 RestartSec=2
 

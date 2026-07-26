@@ -4,7 +4,12 @@
 
 import argparse
 import os
+import sys
 from http.server import ThreadingHTTPServer
+from pathlib import Path
+
+RASPBERRY_PI_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(RASPBERRY_PI_DIR))
 
 from http_handler import RobotWebHandler
 from seba_pi.serial_link import SerialLink
