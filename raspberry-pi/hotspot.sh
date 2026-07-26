@@ -8,10 +8,8 @@ HOTSPOT_IFACE="${SEBA_HOTSPOT_IFACE:-wlan0}"
 HOTSPOT_IP="${SEBA_HOTSPOT_IP:-10.42.0.1/24}"
 HOTSPOT_URL_IP="${HOTSPOT_IP%%/*}"
 HOTSPOT_CHANNEL="${SEBA_HOTSPOT_CHANNEL:-11}"
-SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-LOG_FILE="${SEBA_HOTSPOT_LOG:-$SCRIPT_DIR/hotspot.log}"
 FALLBACK_WAIT_SECONDS="${SEBA_HOTSPOT_FALLBACK_WAIT:-45}"
-MONITOR_INTERVAL_SECONDS="${SEBA_HOTSPOT_MONITOR_INTERVAL:-5}"
+MONITOR_INTERVAL_SECONDS="${SEBA_HOTSPOT_MONITOR_INTERVAL:-10}"
 NORMAL_NETWORK_REASON="not checked"
 
 usage() {
@@ -36,15 +34,12 @@ Environment:
   SEBA_HOTSPOT_FALLBACK_WAIT
                            Seconds to wait before fallback/monitor checks.
   SEBA_HOTSPOT_MONITOR_INTERVAL
-                           Seconds between monitor checks. Default: 5.
-  SEBA_HOTSPOT_LOG         Diagnostic log path.
+                           Seconds between monitor checks. Default: 10.
 EOF
 }
 
 log_message() {
-    line="$(date '+%Y-%m-%d %H:%M:%S') $*"
-    printf '%s\n' "$line"
-    printf '%s\n' "$line" >> "$LOG_FILE" 2>/dev/null || true
+    printf '%s\n' "$*"
 }
 
 require_nmcli() {
@@ -105,23 +100,22 @@ install_hotspot() {
     fi
 
     sudo nmcli connection modify "$HOTSPOT_CONNECTION" \
-        connection.autoconnect no \
         connection.interface-name "$HOTSPOT_IFACE" \
+        connection.autoconnect no \
         802-11-wireless.ssid "$HOTSPOT_SSID" \
         802-11-wireless.mode ap \
         802-11-wireless.band bg \
         802-11-wireless.channel "$HOTSPOT_CHANNEL" \
-        802-11-wireless.hidden no \
         802-11-wireless.powersave 2 \
+        802-11-wireless-security.key-mgmt wpa-psk \
+        802-11-wireless-security.psk "$password" \
+        802-11-wireless-security.proto rsn \
+        802-11-wireless-security.pairwise ccmp \
+        802-11-wireless-security.group ccmp \
+        802-11-wireless-security.pmf 2 \
         ipv4.method shared \
         ipv4.addresses "$HOTSPOT_IP" \
-        ipv6.method disabled \
-        wifi-sec.key-mgmt wpa-psk \
-        wifi-sec.psk "$password" \
-        wifi-sec.proto rsn \
-        wifi-sec.pairwise ccmp \
-        wifi-sec.group ccmp \
-        wifi-sec.pmf 2
+        ipv6.method disabled
 
     echo "Installed hotspot connection: $HOTSPOT_CONNECTION"
     echo "SSID: $HOTSPOT_SSID"
@@ -260,8 +254,6 @@ monitor_hotspot() {
         fi
 
         if normal_network_available; then
-            log_message "Normal network is available. Hotspot monitor waiting. $NORMAL_NETWORK_REASON"
-            echo "Normal network is available. Hotspot monitor waiting."
             sleep "$MONITOR_INTERVAL_SECONDS"
             continue
         fi
@@ -275,8 +267,6 @@ monitor_hotspot() {
 
 show_status() {
     require_nmcli
-
-    echo "Log: $LOG_FILE"
 
     if command -v systemctl >/dev/null 2>&1; then
         echo "NetworkManager: $(systemctl is-active NetworkManager 2>/dev/null || true)"
@@ -316,14 +306,6 @@ show_status() {
     echo ""
     echo "Active NetworkManager connections:"
     nmcli connection show --active
-
-    echo ""
-    echo "Recent hotspot log:"
-    if [ -f "$LOG_FILE" ]; then
-        tail -30 "$LOG_FILE"
-    else
-        echo "no log file"
-    fi
 }
 
 case "${1:-}" in

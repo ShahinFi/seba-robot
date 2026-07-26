@@ -5,46 +5,100 @@ set -eu
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 . "$SCRIPT_DIR/common.sh"
 
-install_service() {
+prepared_services=""
+installed_services=""
+
+prepare_service() {
     service_name="$1"
     template="$RASPBERRY_PI_DIR/systemd/$service_name.in"
-    service_file="/etc/systemd/system/$service_name"
     tmp_file="$(mktemp --suffix=.service)"
 
-    [ -f "$template" ] || fail "Missing service template: $template"
+    [ -f "$template" ] ||
+        fail "Missing service template: $template"
 
-    if [ -x "$REPO_DIR/.venv/bin/python3" ]; then
-        PYTHON="$REPO_DIR/.venv/bin/python3"
-    else
-        PYTHON="$(command -v python3)"
-    fi
+    case "$service_name" in
+        seba-web.service)
+            [ -x "$REPO_DIR/.venv/bin/python3" ] ||
+                fail "Python virtual environment missing. Run the packages stage first."
+            id "$SEBA_INSTALL_USER" >/dev/null 2>&1 ||
+                fail "Service user does not exist: $SEBA_INSTALL_USER"
+            PYTHON="$REPO_DIR/.venv/bin/python3"
+            ;;
+        *)
+            PYTHON=""
+            ;;
+    esac
 
     render_template "$template" "$tmp_file"
     systemd-analyze verify "$tmp_file"
-    sudo install -o root -g root -m 0644 "$tmp_file" "$service_file"
-    rm -f "$tmp_file"
-    sudo systemctl daemon-reload
-    sudo systemctl enable "$service_name"
+    prepared_services="${prepared_services}${service_name}|${tmp_file}
+"
 }
 
-install_wifi_country_service() {
-    install_service seba-wifi-country.service
-    sudo systemctl restart seba-wifi-country.service
+install_prepared_services() {
+    printf '%s' "$prepared_services" |
+        while IFS='|' read -r service_name tmp_file; do
+            [ -n "$service_name" ] || continue
+            sudo install -o root -g root -m 0644 \
+                "$tmp_file" "/etc/systemd/system/$service_name"
+            rm -f "$tmp_file"
+    done
+
+    installed_services="$prepared_services"
+    installed_services="$(printf '%s' "$installed_services" | cut -d '|' -f 1)"
+    installed_services="${installed_services}
+"
+}
+
+cleanup_prepared_services() {
+    printf '%s' "$prepared_services" |
+        while IFS='|' read -r service_name tmp_file; do
+            [ -n "$service_name" ] || continue
+            [ ! -f "$tmp_file" ] || rm -f "$tmp_file"
+        done
+}
+
+finish_services() {
+    [ -n "$prepared_services" ] || return 0
+
+    install_prepared_services
+    sudo systemctl daemon-reload
+
+    [ -n "$installed_services" ] || return 0
+
+    printf '%s' "$installed_services" |
+        while IFS= read -r service_name; do
+            [ -n "$service_name" ] || continue
+            sudo systemctl enable "$service_name"
+        done
+
+    printf '%s' "$installed_services" |
+        while IFS= read -r service_name; do
+            [ -n "$service_name" ] || continue
+            sudo systemctl restart "$service_name"
+        done
+}
+
+show_statuses() {
+    printf '%s' "$installed_services" |
+        while IFS= read -r service_name; do
+            [ -n "$service_name" ] || continue
+            sudo systemctl --no-pager status "$service_name" || true
+        done
 }
 
 require_root_tooling
 require_command systemctl
 require_command systemd-analyze
 
+trap cleanup_prepared_services EXIT
+
 case "${1:-all}" in
     wifi-country-only)
-        install_wifi_country_service
-        sudo systemctl --no-pager status seba-wifi-country.service || true
+        prepare_service seba-wifi-country.service
         ;;
     web-only)
-        install_service seba-web.service
-        sudo systemctl restart seba-web.service
-        sudo systemctl --no-pager status seba-web.service || true
+        prepare_service seba-web.service
         ;;
     hotspot-fallback-only)
         require_command nmcli
@@ -53,30 +107,25 @@ case "${1:-all}" in
             fail "Hotspot profile '$SEBA_HOTSPOT_CONNECTION' is not installed. Run network stage first."
         fi
 
-        install_service seba-hotspot-fallback.service
-        sudo systemctl restart seba-hotspot-fallback.service
-        sudo systemctl --no-pager status seba-hotspot-fallback.service || true
+        prepare_service seba-hotspot-fallback.service
         ;;
     all|"")
-        install_wifi_country_service
+        prepare_service seba-wifi-country.service
         require_command nmcli
 
         if ! nmcli -t -f NAME connection show | grep -Fxq "$SEBA_HOTSPOT_CONNECTION"; then
             fail "Hotspot profile '$SEBA_HOTSPOT_CONNECTION' is not installed. Run network stage first."
         fi
 
-        install_service seba-hotspot-fallback.service
-        install_service seba-web.service
-
-        sudo systemctl restart seba-hotspot-fallback.service
-        sudo systemctl restart seba-web.service
-        sudo systemctl --no-pager status seba-wifi-country.service || true
-        sudo systemctl --no-pager status seba-hotspot-fallback.service || true
-        sudo systemctl --no-pager status seba-web.service || true
+        prepare_service seba-hotspot-fallback.service
+        prepare_service seba-web.service
         ;;
     *)
         fail "Unknown services stage argument: $1"
         ;;
 esac
 
+finish_services
+trap - EXIT
+show_statuses
 record_install_state

@@ -6,23 +6,74 @@ COMMON_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 RASPBERRY_PI_DIR="$(dirname "$COMMON_DIR")"
 REPO_DIR="$(dirname "$RASPBERRY_PI_DIR")"
 
-SEBA_SERVICE_USER_PROVIDED="${SEBA_SERVICE_USER+x}"
-SEBA_SERIAL_PROVIDED="${SEBA_SERIAL+x}"
-SEBA_WEB_PORT_PROVIDED="${SEBA_WEB_PORT+x}"
-SEBA_HOTSPOT_CONNECTION_PROVIDED="${SEBA_HOTSPOT_CONNECTION+x}"
-SEBA_HOTSPOT_SSID_PROVIDED="${SEBA_HOTSPOT_SSID+x}"
-SEBA_HOTSPOT_IFACE_PROVIDED="${SEBA_HOTSPOT_IFACE+x}"
-SEBA_HOTSPOT_IP_PROVIDED="${SEBA_HOTSPOT_IP+x}"
-SEBA_HOTSPOT_CHANNEL_PROVIDED="${SEBA_HOTSPOT_CHANNEL+x}"
-SEBA_WIFI_COUNTRY_PROVIDED="${SEBA_WIFI_COUNTRY+x}"
-SEBA_WIFI_CONNECTION_PROVIDED="${SEBA_WIFI_CONNECTION+x}"
-SEBA_ETH_IFACE_PROVIDED="${SEBA_ETH_IFACE+x}"
-SEBA_ETH_ADDRESS_PROVIDED="${SEBA_ETH_ADDRESS+x}"
+save_explicit_value() {
+    name="$1"
+    if [ "${!name+x}" ]; then
+        printf -v "_EXPLICIT_$name" '%s' "${!name}"
+        printf -v "_HAS_EXPLICIT_$name" '%s' 1
+        printf -v "${name}_PROVIDED" '%s' 1
+    else
+        printf -v "${name}_PROVIDED" '%s' ''
+    fi
+}
+
+restore_explicit_value() {
+    name="$1"
+    has_name="_HAS_EXPLICIT_$name"
+    value_name="_EXPLICIT_$name"
+
+    if [ "${!has_name:-0}" = "1" ]; then
+        printf -v "$name" '%s' "${!value_name}"
+        export "$name"
+    fi
+}
+
+for name in \
+    SEBA_SERVICE_USER \
+    SEBA_SERIAL \
+    SEBA_WEB_PORT \
+    SEBA_HOTSPOT_CONNECTION \
+    SEBA_HOTSPOT_SSID \
+    SEBA_HOTSPOT_IFACE \
+    SEBA_HOTSPOT_IP \
+    SEBA_HOTSPOT_CHANNEL \
+    SEBA_HOTSPOT_PASSWORD \
+    SEBA_WIFI_COUNTRY \
+    SEBA_WIFI_CONNECTION \
+    SEBA_WIFI_SSID \
+    SEBA_WIFI_PASSWORD \
+    SEBA_ETH_IFACE \
+    SEBA_ETH_ADDRESS \
+    SEBA_NONINTERACTIVE
+do
+    save_explicit_value "$name"
+done
 
 SEBA_INSTALL_STATE_FILE="${SEBA_INSTALL_STATE_FILE:-$RASPBERRY_PI_DIR/.install-state}"
 if [ -f "$SEBA_INSTALL_STATE_FILE" ]; then
     . "$SEBA_INSTALL_STATE_FILE"
 fi
+
+for name in \
+    SEBA_SERVICE_USER \
+    SEBA_SERIAL \
+    SEBA_WEB_PORT \
+    SEBA_HOTSPOT_CONNECTION \
+    SEBA_HOTSPOT_SSID \
+    SEBA_HOTSPOT_IFACE \
+    SEBA_HOTSPOT_IP \
+    SEBA_HOTSPOT_CHANNEL \
+    SEBA_HOTSPOT_PASSWORD \
+    SEBA_WIFI_COUNTRY \
+    SEBA_WIFI_CONNECTION \
+    SEBA_WIFI_SSID \
+    SEBA_WIFI_PASSWORD \
+    SEBA_ETH_IFACE \
+    SEBA_ETH_ADDRESS \
+    SEBA_NONINTERACTIVE
+do
+    restore_explicit_value "$name"
+done
 
 SEBA_INSTALL_USER="${SEBA_SERVICE_USER:-${SEBA_INSTALL_USER:-$(id -un)}}"
 SEBA_NONINTERACTIVE="${SEBA_NONINTERACTIVE:-0}"
@@ -124,18 +175,29 @@ backup_file() {
     fi
 }
 
+backup_file_if_changed() {
+    path="$1"
+    candidate="$2"
+
+    if [ -f "$path" ] && cmp -s "$path" "$candidate"; then
+        return
+    fi
+
+    backup_file "$path"
+}
+
 write_root_file() {
     destination="$1"
     mode="$2"
     owner="$3"
     source_file="$4"
 
-    backup_file "$destination"
+    backup_file_if_changed "$destination" "$source_file"
     sudo install -o "$owner" -g "$owner" -m "$mode" "$source_file" "$destination"
 }
 
 record_install_state() {
-    tmp_file="$(mktemp)"
+    tmp_file="$(mktemp "${SEBA_INSTALL_STATE_FILE}.tmp.XXXXXX")"
     {
         printf 'SEBA_INSTALL_USER=%q\n' "$SEBA_INSTALL_USER"
         printf 'SEBA_REPO_DIR=%q\n' "$REPO_DIR"
@@ -151,6 +213,7 @@ record_install_state() {
         printf 'SEBA_ETH_IFACE=%q\n' "$SEBA_ETH_IFACE"
         printf 'SEBA_ETH_ADDRESS=%q\n' "$SEBA_ETH_ADDRESS"
     } > "$tmp_file"
+    chmod 600 "$tmp_file"
     mv "$tmp_file" "$SEBA_INSTALL_STATE_FILE"
 }
 

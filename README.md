@@ -156,7 +156,7 @@ See the [STM32 firmware documentation](firmware/stm32/README.md) for upload, mon
 The Raspberry Pi software provides the robot web interfaces.
 
 ```bash
-python3 raspberry-pi/web/server.py --serial /dev/ttyAMA0 --port 8080
+.venv/bin/python3 raspberry-pi/web/server.py --serial /dev/ttyAMA0 --port 8080
 ```
 
 The operator control panel is available at `/control`, and the engineering tuner is available at `/tuner`.

@@ -66,6 +66,7 @@ raspberry-pi/
 |   |-- common.sh
 |   |-- network.sh
 |   |-- packages.sh
+|   |-- preflight.sh
 |   |-- services.sh
 |   |-- uart.sh
 |   `-- verify.sh
@@ -120,9 +121,16 @@ Run the staged installer from the repository root:
 bash raspberry-pi/install.sh all
 ```
 
+The `all` command installs the required packages, UART setup, network configuration, and systemd services. A reboot is required after it finishes so UART boot changes and group membership take effect. After reboot, run:
+
+```bash
+bash raspberry-pi/install.sh verify
+```
+
 The same installer can run individual stages:
 
 ```bash
+bash raspberry-pi/install.sh preflight
 bash raspberry-pi/install.sh packages
 bash raspberry-pi/install.sh uart
 bash raspberry-pi/install.sh network
@@ -132,6 +140,8 @@ bash raspberry-pi/install.sh verify
 
 The `all` command stops at the first failed stage. Each stage is intended to be idempotent: running it again updates SEBA-owned configuration instead of creating duplicate services, netplan files, or NetworkManager profiles.
 
+The installer runs preflight automatically before every modifying stage.
+
 Interactive prompts are the default for values that are specific to the local robot or network. Non-interactive setup can be done with environment variables:
 
 ```bash
@@ -140,6 +150,8 @@ SEBA_HOTSPOT_PASSWORD='change-this-password' \
 SEBA_WIFI_COUNTRY=FI \
 bash raspberry-pi/install.sh all
 ```
+
+In non-interactive mode, `SEBA_HOTSPOT_PASSWORD` is required. `SEBA_WIFI_COUNTRY` must match the country where the robot operates.
 
 The installer records the resolved repository path and Linux user in:
 
@@ -192,7 +204,7 @@ The UART stage updates:
 It ensures:
 
 - `enable_uart=1`
-- `console=serial0,115200` is removed from the kernel command line
+- `console=serial0,<baud>` and `console=ttyAMA0,<baud>` are removed from the kernel command line
 - the install user belongs to `dialout`
 
 The default UART device is:
@@ -214,7 +226,10 @@ The network stage configures the Raspberry Pi so a browser device can reach the 
 Network ownership rule:
 
 - NetworkManager owns Wi-Fi.
-- Netplan selects NetworkManager as the renderer.
+- Netplan owns the renderer selection and Ethernet recovery address.
+- NetworkManager owns the normal Wi-Fi and hotspot profiles.
+- cloud-init network regeneration is disabled after setup.
+- systemd owns the Wi-Fi country, hotspot fallback, and web services.
 - Standalone `hostapd` and standalone `dnsmasq` are not used.
 - `systemd-networkd` must not manage `wlan0`.
 
@@ -224,12 +239,14 @@ The network stage writes the SEBA-owned netplan file:
 /etc/netplan/99-seba-network.yaml
 ```
 
-It backs up any previous file at that path, validates netplan, and configures:
+It backs up Netplan before changing it, validates the proposed Netplan configuration, and restores the backup if validation fails. It configures:
 
 - NetworkManager as the netplan renderer
 - Ethernet recovery on `eth0`
 - the Wi-Fi regulatory country service
 - the NetworkManager hotspot profile
+
+Run the network stage over Ethernet when possible because `netplan apply` may interrupt Wi-Fi SSH.
 
 Default network values:
 
@@ -252,6 +269,12 @@ bash raspberry-pi/install.sh network
 
 The Ethernet recovery address is intended for direct maintenance access while changing Wi-Fi modes. Configure the computer on the other end of the Ethernet cable with another address in `192.168.10.0/24`, then connect with:
 
+| Device | Example setting |
+|---|---|
+| Raspberry Pi | `192.168.10.50/24` |
+| maintenance computer | `192.168.10.10/24` |
+| gateway | empty |
+
 ```bash
 ssh <user>@192.168.10.50
 ```
@@ -265,6 +288,8 @@ bash raspberry-pi/install.sh network
 ```
 
 If the NetworkManager connection name is different from the SSID, set `SEBA_WIFI_CONNECTION` to the saved profile name.
+
+If normal Wi-Fi credentials are omitted, existing NetworkManager Wi-Fi profiles are preserved.
 
 ### 5.4 Services
 
@@ -290,7 +315,7 @@ The web service uses:
 
 - the current repository path
 - the current Linux user
-- `.venv/bin/python3` if it exists
+- `.venv/bin/python3`
 - `/dev/ttyAMA0` unless overridden
 - port `8080` unless overridden
 
@@ -418,13 +443,13 @@ The hotspot fallback service can become inactive after it successfully starts th
 Run the web server from the repository root:
 
 ```bash
-python3 raspberry-pi/web/server.py --serial /dev/ttyAMA0 --port 8080
+.venv/bin/python3 raspberry-pi/web/server.py --serial /dev/ttyAMA0 --port 8080
 ```
 
 The same settings can be provided through environment variables:
 
 ```bash
-SEBA_SERIAL=/dev/ttyAMA0 SEBA_BAUD=115200 SEBA_WEB_HOST=0.0.0.0 SEBA_WEB_PORT=8080 python3 raspberry-pi/web/server.py
+SEBA_SERIAL=/dev/ttyAMA0 SEBA_BAUD=115200 SEBA_WEB_HOST=0.0.0.0 SEBA_WEB_PORT=8080 .venv/bin/python3 raspberry-pi/web/server.py
 ```
 
 Runtime settings:
@@ -613,7 +638,7 @@ The group list should include:
 dialout
 ```
 
-Check that the Raspberry Pi serial console is not using the robot UART. For this robot connection, the kernel command line should not contain `console=serial0,115200`.
+Check that the Raspberry Pi serial console is not using the robot UART. For this robot connection, the kernel command line should not contain `console=serial0,<baud>` or `console=ttyAMA0,<baud>`.
 
 ```bash
 cat /boot/firmware/cmdline.txt

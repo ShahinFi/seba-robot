@@ -1,6 +1,5 @@
 [Unit]
 Description=SEBA-ROBOT Wi-Fi regulatory country
-DefaultDependencies=no
 Before=NetworkManager.service
 Wants=NetworkManager.service
 

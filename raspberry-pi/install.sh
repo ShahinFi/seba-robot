@@ -7,10 +7,11 @@ SETUP_DIR="$SCRIPT_DIR/setup"
 
 usage() {
     cat <<EOF
-Usage: bash raspberry-pi/install.sh <all|packages|uart|network|services|verify>
+Usage: bash raspberry-pi/install.sh <all|preflight|packages|uart|network|services|verify>
 
 Stages:
-  all       Run packages, uart, network, services, and verify.
+  all       Run preflight, packages, uart, network, and services.
+  preflight Check the supported Raspberry Pi platform before changes.
   packages  Install operating-system packages and Python dependencies.
   uart      Configure the Raspberry Pi UART for the STM32 link.
   network   Configure NetworkManager, Ethernet recovery, Wi-Fi country, and hotspot.
@@ -25,6 +26,9 @@ EOF
 run_stage() {
     stage="$1"
     case "$stage" in
+        preflight)
+            bash "$SETUP_DIR/preflight.sh"
+            ;;
         packages)
             bash "$SETUP_DIR/packages.sh"
             ;;
@@ -49,13 +53,27 @@ run_stage() {
 
 case "${1:-}" in
     all)
+        run_stage preflight
         run_stage packages
         run_stage uart
         run_stage network
         run_stage services
-        run_stage verify
+        cat <<'EOF'
+
+Installation stages completed.
+
+A reboot is required to activate UART boot changes and refreshed group
+membership. Reboot the Raspberry Pi, reconnect, then run:
+
+    bash raspberry-pi/install.sh verify
+
+EOF
         ;;
-    packages|uart|network|services|verify)
+    packages|uart|network|services)
+        run_stage preflight
+        run_stage "$1"
+        ;;
+    preflight|verify)
         run_stage "$1"
         ;;
     -h|--help|help)
