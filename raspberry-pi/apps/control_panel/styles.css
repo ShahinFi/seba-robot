@@ -445,10 +445,11 @@ label {
     --controller-pad-top: calc(var(--controller-pad-block) + var(--safe-top));
     --controller-pad-bottom: calc(var(--controller-pad-block) + var(--safe-bottom));
     --joystick-clearance: 24px;
-    --right-control-width: clamp(220px, 34dvw, 330px);
+    --motion-control-width: clamp(190px, 25dvw, 270px);
+    --run-control-width: clamp(210px, 30dvw, 300px);
     --joystick-size: min(
       calc(100dvh - var(--controller-header) - var(--controller-pad-top) - var(--controller-pad-bottom) - var(--joystick-clearance)),
-      calc(100dvw - var(--controller-pad-left) - var(--controller-pad-right) - var(--right-control-width) - var(--controller-gap)),
+      calc(100dvw - var(--controller-pad-left) - var(--controller-pad-right) - var(--motion-control-width) - var(--run-control-width) - (2 * var(--controller-gap))),
       430px
     );
   }
@@ -536,12 +537,14 @@ label {
   }
 
   .control-stack {
-    grid-template-columns: var(--joystick-size) minmax(0, var(--right-control-width));
+    grid-template-columns:
+      var(--joystick-size)
+      minmax(0, var(--motion-control-width))
+      minmax(0, var(--run-control-width));
     grid-template-areas:
-      "stick run"
-      "stick limits"
-      "stick stop";
-    grid-template-rows: minmax(0, 1fr) auto minmax(44px, 0.34fr);
+      "stick limits run"
+      "stick stop run";
+    grid-template-rows: auto minmax(44px, 1fr);
     justify-content: space-between;
     gap: var(--controller-gap);
     overflow: hidden;
@@ -562,6 +565,7 @@ label {
     grid-area: run;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
+    align-self: stretch;
     overflow: hidden;
   }
 
@@ -580,6 +584,7 @@ label {
     grid-area: limits;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+    align-self: end;
   }
 
   .button-grid {
@@ -609,10 +614,11 @@ label {
     --controller-pad-left: calc(12px + var(--safe-left));
     --controller-pad-right: calc(12px + var(--safe-right));
     --joystick-clearance: 20px;
-    --right-control-width: clamp(190px, 34dvw, 280px);
+    --motion-control-width: clamp(170px, 25dvw, 230px);
+    --run-control-width: clamp(190px, 30dvw, 260px);
     --joystick-size: min(
       calc(100dvh - var(--controller-header) - var(--controller-pad-top) - var(--controller-pad-bottom) - var(--joystick-clearance)),
-      calc(100dvw - var(--controller-pad-left) - var(--controller-pad-right) - var(--right-control-width) - var(--controller-gap)),
+      calc(100dvw - var(--controller-pad-left) - var(--controller-pad-right) - var(--motion-control-width) - var(--run-control-width) - (2 * var(--controller-gap))),
       360px
     );
   }
@@ -678,8 +684,11 @@ label {
   }
 
   .control-stack {
-    grid-template-columns: var(--joystick-size) minmax(0, var(--right-control-width));
-    grid-template-rows: minmax(0, 1fr) auto minmax(38px, 0.32fr);
+    grid-template-columns:
+      var(--joystick-size)
+      minmax(0, var(--motion-control-width))
+      minmax(0, var(--run-control-width));
+    grid-template-rows: auto minmax(38px, 1fr);
     gap: var(--controller-gap);
   }
 
