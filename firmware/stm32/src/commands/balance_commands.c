@@ -37,7 +37,7 @@ CommandResult BalanceCommands_Handle(
     float second_float_value;
 
     if (
-        argument_count == 17 &&
+        argument_count == 16 &&
         strcmp(arguments[1], "config") == 0
     )
     {
@@ -315,7 +315,7 @@ static CommandResult BalanceCommands_ApplyConfig(
     uint32_t row;
     uint32_t column;
 
-    if (argument_count != 17)
+    if (argument_count != 16)
     {
         Serial_WriteLine(
             "ERROR: usage: balance config <gain_percent> <max_mNm> <12 gains>"
