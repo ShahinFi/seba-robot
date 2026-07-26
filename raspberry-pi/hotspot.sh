@@ -8,6 +8,7 @@ HOTSPOT_IFACE="${SEBA_HOTSPOT_IFACE:-wlan0}"
 HOTSPOT_IP="${SEBA_HOTSPOT_IP:-10.42.0.1/24}"
 HOTSPOT_URL_IP="${HOTSPOT_IP%%/*}"
 HOTSPOT_CHANNEL="${SEBA_HOTSPOT_CHANNEL:-11}"
+WEB_PORT="${SEBA_WEB_PORT:-8080}"
 FALLBACK_WAIT_SECONDS="${SEBA_HOTSPOT_FALLBACK_WAIT:-45}"
 MONITOR_INTERVAL_SECONDS="${SEBA_HOTSPOT_MONITOR_INTERVAL:-10}"
 NORMAL_NETWORK_REASON="not checked"
@@ -31,6 +32,7 @@ Environment:
   SEBA_HOTSPOT_IFACE       Wi-Fi interface. Default: wlan0.
   SEBA_HOTSPOT_IP          Hotspot address. Default: 10.42.0.1/24.
   SEBA_HOTSPOT_CHANNEL     2.4 GHz channel. Default: 11.
+  SEBA_WEB_PORT            Web server port printed in URLs. Default: 8080.
   SEBA_HOTSPOT_FALLBACK_WAIT
                            Seconds to wait before fallback/monitor checks.
   SEBA_HOTSPOT_MONITOR_INTERVAL
@@ -42,9 +44,13 @@ log_message() {
     printf '%s\n' "$*"
 }
 
+error_message() {
+    printf 'ERROR: %s\n' "$*" >&2
+}
+
 require_nmcli() {
     if ! command -v nmcli >/dev/null 2>&1; then
-        echo "ERROR: nmcli is required. Install or enable NetworkManager." >&2
+        error_message "nmcli is required. Install or enable NetworkManager."
         exit 1
     fi
 }
@@ -66,7 +72,7 @@ read_password() {
     fi
 
     if [ ! -t 0 ]; then
-        echo "ERROR: set SEBA_HOTSPOT_PASSWORD for non-interactive install." >&2
+        error_message "set SEBA_HOTSPOT_PASSWORD for non-interactive install."
         exit 1
     fi
 
@@ -86,7 +92,7 @@ install_hotspot() {
     password="$(read_password)"
 
     if [ "${#password}" -lt 8 ] || [ "${#password}" -gt 63 ]; then
-        echo "ERROR: hotspot password must be 8 to 63 characters." >&2
+        error_message "hotspot password must be 8 to 63 characters."
         exit 1
     fi
 
@@ -127,21 +133,19 @@ start_hotspot() {
     require_nmcli
 
     if ! connection_exists; then
-        echo "ERROR: hotspot is not installed. Run: bash raspberry-pi/hotspot.sh install" >&2
+        error_message "hotspot is not installed. Run: bash raspberry-pi/hotspot.sh install"
         exit 1
     fi
 
     if ! output="$(sudo nmcli connection up "$HOTSPOT_CONNECTION" 2>&1)"; then
-        log_message "ERROR: failed to start hotspot: $output"
-        echo "ERROR: failed to start hotspot: $output" >&2
+        error_message "failed to start hotspot: $output"
         exit 1
     fi
 
     log_message "Hotspot started. $output"
-    echo "Hotspot started."
     echo "Connect to Wi-Fi: $HOTSPOT_SSID"
-    echo "Control: http://$HOTSPOT_URL_IP:8080/control"
-    echo "Tuner:   http://$HOTSPOT_URL_IP:8080/tuner"
+    echo "Control: http://$HOTSPOT_URL_IP:$WEB_PORT/control"
+    echo "Tuner:   http://$HOTSPOT_URL_IP:$WEB_PORT/tuner"
 }
 
 stop_hotspot() {
@@ -225,12 +229,10 @@ fallback_hotspot() {
 
     if normal_network_available; then
         log_message "Normal network is available. Hotspot fallback not started. $NORMAL_NETWORK_REASON"
-        echo "Normal network is available. Hotspot fallback not started."
         exit 0
     fi
 
     log_message "Normal network is unavailable. Starting hotspot fallback. $NORMAL_NETWORK_REASON"
-    echo "Normal network is unavailable. Starting hotspot fallback."
     start_hotspot
 }
 
@@ -238,8 +240,7 @@ monitor_hotspot() {
     require_nmcli
 
     if ! connection_exists; then
-        log_message "ERROR: hotspot is not installed. Run: bash raspberry-pi/hotspot.sh install"
-        echo "ERROR: hotspot is not installed. Run: bash raspberry-pi/hotspot.sh install" >&2
+        error_message "hotspot is not installed. Run: bash raspberry-pi/hotspot.sh install"
         exit 1
     fi
 
@@ -249,7 +250,6 @@ monitor_hotspot() {
     while true; do
         if hotspot_active; then
             log_message "Hotspot is active. Network monitor exiting."
-            echo "Hotspot is active. Network monitor exiting."
             exit 0
         fi
 
@@ -259,7 +259,6 @@ monitor_hotspot() {
         fi
 
         log_message "Normal network is unavailable. Starting hotspot and staying in hotspot mode. $NORMAL_NETWORK_REASON"
-        echo "Normal network is unavailable. Starting hotspot and staying in hotspot mode."
         start_hotspot
         exit 0
     done
@@ -286,8 +285,8 @@ show_status() {
     if hotspot_active; then
         echo "Active: yes"
         echo "SSID: $HOTSPOT_SSID"
-        echo "Control: http://$HOTSPOT_URL_IP:8080/control"
-        echo "Tuner:   http://$HOTSPOT_URL_IP:8080/tuner"
+        echo "Control: http://$HOTSPOT_URL_IP:$WEB_PORT/control"
+        echo "Tuner:   http://$HOTSPOT_URL_IP:$WEB_PORT/tuner"
     else
         echo "Active: no"
     fi

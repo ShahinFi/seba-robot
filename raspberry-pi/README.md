@@ -414,6 +414,8 @@ The `install` command creates or updates the hotspot profile and sets its passwo
 SEBA_HOTSPOT_PASSWORD='change-this-password' bash raspberry-pi/hotspot.sh install
 ```
 
+`SEBA_WEB_PORT` sets the web port printed by `hotspot.sh` in control and tuner URLs. The default is `8080`.
+
 The hotspot is not enabled automatically by `hotspot.sh install`. Start it manually with:
 
 ```bash

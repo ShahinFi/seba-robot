@@ -166,12 +166,12 @@ write_seba_netplan "$tmp_netplan"
 sudo install -o root -g root -m 0600 "$tmp_netplan" "$SEBA_NETPLAN_FILE"
 rm -f "$tmp_netplan"
 
-install_cloud_init_network_disable
-
 if ! sudo netplan generate; then
     restore_netplan_backup "$backup_dir"
     fail "New Netplan configuration was invalid; previous configuration restored."
 fi
+
+install_cloud_init_network_disable
 
 configure_normal_wifi
 

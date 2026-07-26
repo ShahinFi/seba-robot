@@ -5,6 +5,7 @@ Wants=NetworkManager.service
 
 [Service]
 Type=simple
+Environment=SEBA_WEB_PORT=@WEB_PORT@
 ExecStart=/usr/bin/env bash @REPO_DIR@/raspberry-pi/hotspot.sh monitor
 Restart=on-failure
 RestartSec=5

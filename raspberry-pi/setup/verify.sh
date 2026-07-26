@@ -34,6 +34,20 @@ check_output() {
     return 1
 }
 
+check_exact_output() {
+    name="$1"
+    expected="$2"
+    shift 2
+    output="$("$@" 2>/dev/null || true)"
+    if [ "$output" = "$expected" ]; then
+        return 0
+    fi
+
+    failures="${failures}${name}
+"
+    return 1
+}
+
 check "Ubuntu 24.04" sh -c \
     "grep -q '^ID=ubuntu$' /etc/os-release && grep -q '^VERSION_ID=\"24.04\"$' /etc/os-release"
 check "aarch64 architecture" sh -c '[ "$(uname -m)" = "aarch64" ]'
@@ -49,6 +63,10 @@ check_output "SEBA Netplan owner" '^root:root$' stat -c '%U:%G' "$SEBA_NETPLAN_F
 check_output "SEBA Netplan mode" '^600$' stat -c '%a' "$SEBA_NETPLAN_FILE"
 check "Netplan generates" sudo netplan generate
 check "cloud-init network disabled" test -f "$CLOUD_INIT_DISABLE_FILE"
+check "UART enabled in firmware config" sh -c \
+    "grep -Eq '^enable_uart=1$' /boot/firmware/config.txt"
+check "robot UART not used as kernel console" sh -c \
+    "! tr ' ' '\n' </boot/firmware/cmdline.txt | grep -Eq '^console=(serial0|ttyAMA0),[^[:space:]]+$'"
 check "no other Netplan file owns Ethernet recovery" sh -c "
     for file in /etc/netplan/*.yaml; do
         [ -e \"\$file\" ] || continue
@@ -59,24 +77,28 @@ check "no other Netplan file owns Ethernet recovery" sh -c "
 
 if [ -n "$SEBA_WIFI_CONNECTION" ]; then
     check "normal Wi-Fi profile exists" nmcli connection show "$SEBA_WIFI_CONNECTION"
-    check_output "normal Wi-Fi autoconnect enabled" '^yes$' \
+    check_exact_output "normal Wi-Fi autoconnect enabled" 'yes' \
         nmcli -g connection.autoconnect connection show "$SEBA_WIFI_CONNECTION"
     check_output "normal Wi-Fi powersave disabled" '^2' \
         nmcli -g 802-11-wireless.powersave connection show "$SEBA_WIFI_CONNECTION"
 fi
 
 check "hotspot profile exists" nmcli connection show "$SEBA_HOTSPOT_CONNECTION"
-check_output "hotspot SSID" "^${SEBA_HOTSPOT_SSID}$" \
+check_exact_output "hotspot interface" "$SEBA_HOTSPOT_IFACE" \
+    nmcli -g connection.interface-name connection show "$SEBA_HOTSPOT_CONNECTION"
+check_exact_output "hotspot SSID" "$SEBA_HOTSPOT_SSID" \
     nmcli -g 802-11-wireless.ssid connection show "$SEBA_HOTSPOT_CONNECTION"
-check_output "hotspot AP mode" '^ap$' \
+check_exact_output "hotspot AP mode" 'ap' \
     nmcli -g 802-11-wireless.mode connection show "$SEBA_HOTSPOT_CONNECTION"
-check_output "hotspot autoconnect disabled" '^no$' \
+check_exact_output "hotspot band" 'bg' \
+    nmcli -g 802-11-wireless.band connection show "$SEBA_HOTSPOT_CONNECTION"
+check_exact_output "hotspot autoconnect disabled" 'no' \
     nmcli -g connection.autoconnect connection show "$SEBA_HOTSPOT_CONNECTION"
-check_output "hotspot channel" "^${SEBA_HOTSPOT_CHANNEL}$" \
+check_exact_output "hotspot channel" "$SEBA_HOTSPOT_CHANNEL" \
     nmcli -g 802-11-wireless.channel connection show "$SEBA_HOTSPOT_CONNECTION"
 check_output "hotspot powersave disabled" '^2' \
     nmcli -g 802-11-wireless.powersave connection show "$SEBA_HOTSPOT_CONNECTION"
-check_output "hotspot WPA2 key management" '^wpa-psk$' \
+check_exact_output "hotspot WPA2 key management" 'wpa-psk' \
     nmcli -g 802-11-wireless-security.key-mgmt connection show "$SEBA_HOTSPOT_CONNECTION"
 check_output "hotspot RSN protocol" '(^|,)rsn(,|$)' \
     nmcli -g 802-11-wireless-security.proto connection show "$SEBA_HOTSPOT_CONNECTION"
@@ -86,9 +108,11 @@ check_output "hotspot group CCMP" 'ccmp' \
     nmcli -g 802-11-wireless-security.group connection show "$SEBA_HOTSPOT_CONNECTION"
 check_output "hotspot PMF optional" '^2' \
     nmcli -g 802-11-wireless-security.pmf connection show "$SEBA_HOTSPOT_CONNECTION"
-check_output "hotspot IPv4 shared" '^shared$' \
+check_exact_output "hotspot IPv4 shared" 'shared' \
     nmcli -g ipv4.method connection show "$SEBA_HOTSPOT_CONNECTION"
-check_output "hotspot IPv6 disabled" '^disabled$' \
+check_exact_output "hotspot IPv4 address" "$SEBA_HOTSPOT_IP" \
+    nmcli -g ipv4.addresses connection show "$SEBA_HOTSPOT_CONNECTION"
+check_exact_output "hotspot IPv6 disabled" 'disabled' \
     nmcli -g ipv6.method connection show "$SEBA_HOTSPOT_CONNECTION"
 
 check "Wi-Fi country service enabled" systemctl is-enabled --quiet seba-wifi-country.service
