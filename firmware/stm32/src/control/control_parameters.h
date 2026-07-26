@@ -42,6 +42,7 @@ typedef struct
     float velocity_filter_cutoff_hz;
     float derivative_filter_cutoff_hz;
     float max_wheel_torque_mnm;
+    float start_angle_rad;
     float fall_angle_rad;
     float motion_gain_scale;
     float rslqr_gain_nm_s[2][6];

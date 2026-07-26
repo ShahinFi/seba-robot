@@ -289,7 +289,7 @@ The grouped `actuator config` command is used by the Raspberry Pi tuner so one a
 
 | Command | Purpose |
 |---|---|
-| `balance start` | Stops manual motor-test output and enables motion control if the current robot state is valid and inside the allowed fall angle. |
+| `balance start` | Stops manual motor-test output and enables motion control if the current robot state is valid and within the allowed start angle. |
 | `balance stop` | Disables motion control and actuator output. |
 | `balance status` | Prints motion-control state, fault state, command values, torque commands, torque rates, gain scale, and torque limit. |
 | `balance max-torque <mNm>` | Sets the symmetric left and right wheel-side torque limit. |
@@ -399,7 +399,7 @@ Rejected balance-arm events use one of these reasons:
 | `imu_stale` | IMU data exceeded the allowed age. |
 | `imu_not_ready` | IMU state is not valid. |
 | `encoder_not_ready` | Encoder state is not valid. |
-| `fall_angle` | Pitch angle is outside the allowed start range. |
+| `start_angle` | Pitch angle is outside the allowed start range. |
 | `state_not_ready` | Complete robot state is not valid. |
 
 Motion-fault events report the fault reason and the captured robot state at the fault:
@@ -501,6 +501,7 @@ Default motion-control values:
 | Parameter | Value |
 |---|---:|
 | maximum wheel torque | `1300 mNm` |
+| start angle | `0.087266463 rad` |
 | fall angle | `1.047197551 rad` |
 | motion command timeout | `300 ms` |
 | gain scale | `1.0` |
@@ -630,7 +631,9 @@ When motion control enters a fault:
 
 `balance stop` disables motion control and actuator output, clears the motion-control fault state, and resets the motion command and torque command states.
 
-`balance start` arms motion control only when the current robot state is valid and the pitch angle is inside the allowed fall angle.
+`balance start` arms motion control only when the current robot state is valid and the pitch angle is inside the allowed start angle. A rejected start request does not create a motion-control fault.
+
+The fall angle is separate from the start angle. It is used after motion control is already running.
 
 The motion-command watchdog is separate from motion faults. If no fresh `balance command` arrives within:
 
@@ -720,7 +723,7 @@ Check the `EVT motion fault reason=...` line and the captured state fields. Comm
 
 - invalid state
 - stale IMU data
-- pitch angle outside the configured fall angle
+- pitch angle outside the configured fall angle after balance has started
 - actuator current-control fault
 
 ### Motors do not move under actuator command

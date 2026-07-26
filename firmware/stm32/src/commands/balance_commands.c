@@ -540,19 +540,19 @@ static bool BalanceCommands_StateAllowsStart(
 
     if (
         state->pitch_rad >
-        parameters->fall_angle_rad ||
+        parameters->start_angle_rad ||
         state->pitch_rad <
-        -parameters->fall_angle_rad
+        -parameters->start_angle_rad
     )
     {
         BalanceCommands_PrintArmEvent(
             "rejected",
-            "fall_angle",
+            "start_angle",
             state
         );
 
         Serial_WriteLine(
-            "ERROR: robot is past the fall angle."
+            "ERROR: robot must be within 5 deg of upright to start balance."
         );
 
         return false;

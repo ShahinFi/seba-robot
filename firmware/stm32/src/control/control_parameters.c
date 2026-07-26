@@ -42,6 +42,7 @@ static const ControlParameters control_parameters =
      * Raspberry Pi tuner defaults unless changed over serial.
      */
     .max_wheel_torque_mnm = 1300.0F,
+    .start_angle_rad = 0.087266463F,
     .fall_angle_rad = 1.047197551F,
     .motion_gain_scale = 1.0F,
 
