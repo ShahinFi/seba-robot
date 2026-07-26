@@ -7,6 +7,53 @@ const primaryMetrics = [
   "valid", "balance", "fault_name", "fall"
 ];
 
+const telemetryLabels = {
+  valid: "valid",
+  balance: "balance",
+  fault_name: "fault name",
+  fall: "fall",
+  theta: "theta [rad]",
+  theta_dot: "theta_dot [rad/s]",
+  theta_ddot: "theta_ddot [rad/s^2]",
+  v: "v [m/s]",
+  v_dot: "v_dot [m/s^2]",
+  psi_dot: "psi_dot [rad/s]",
+  psi_ddot: "psi_ddot [rad/s^2]",
+  v_cmd: "v_cmd [m/s]",
+  yaw_cmd: "yaw_cmd [rad/s]",
+  cmd_age: "cmd_age [ms]",
+  cmd_count: "cmd_count",
+  left_T: "left_T [mNm]",
+  right_T: "right_T [mNm]",
+  left_dT: "left_dT [mNm/s]",
+  right_dT: "right_dT [mNm/s]",
+  gain: "gain [x]",
+  max_T: "max_T [mNm]",
+  act: "act",
+  act_fault: "act_fault",
+  act_read_failed: "act_read_failed",
+  left_ref: "left_ref [mA]",
+  right_ref: "right_ref [mA]",
+  left_meas: "left_meas [mA]",
+  right_meas: "right_meas [mA]",
+  left_err: "left_err [mA]",
+  right_err: "right_err [mA]",
+  left_int: "left_int [mV]",
+  right_int: "right_int [mV]",
+  left_pwm: "left_pwm [permille]",
+  right_pwm: "right_pwm [permille]",
+  imu: "imu",
+  imu_stale: "imu_stale",
+  enc: "enc",
+  updates: "updates",
+  ori_age: "ori_age [ms]",
+  gyro_age: "gyro_age [ms]",
+  ori_count: "ori_count",
+  gyro_count: "gyro_count",
+  fault: "fault",
+  fault_code: "fault_code"
+};
+
 const telemetryGroups = [
   {
     title: "State",
@@ -92,7 +139,7 @@ function buildReadout() {
   for (const key of primaryMetrics) {
     const box = document.createElement("div");
     box.className = "metric";
-    box.innerHTML = `<span>${key}</span><strong id="m_${key}">-</strong>`;
+    box.innerHTML = `<span>${telemetryLabels[key]}</span><strong id="m_${key}">-</strong>`;
     statusGrid.appendChild(box);
   }
 
@@ -107,7 +154,7 @@ function buildReadout() {
     for (const key of group.keys) {
       const row = document.createElement("div");
       row.className = "telemetry-row";
-      row.innerHTML = `<span>${key}</span><strong id="m_${key}">-</strong>`;
+      row.innerHTML = `<span>${telemetryLabels[key]}</span><strong id="m_${key}">-</strong>`;
       section.appendChild(row);
     }
 

@@ -288,10 +288,10 @@ def parse_telemetry(line):
 
         key, value = item.split("=", 1)
         try:
-            if "." in value or value.startswith("-"):
-                values[key] = float(value)
-            else:
+            if value.lstrip("-").isdigit():
                 values[key] = int(value)
+            else:
+                values[key] = float(value)
         except ValueError:
             values[key] = value
 

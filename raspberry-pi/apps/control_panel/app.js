@@ -7,8 +7,8 @@ const stateMetrics = [
   ["Turn command [rad/s]", "yaw_cmd"],
   ["Left current [mA]", "left_meas"],
   ["Right current [mA]", "right_meas"],
-  ["Left PWM", "left_pwm"],
-  ["Right PWM", "right_pwm"]
+  ["Left PWM [permille]", "left_pwm"],
+  ["Right PWM [permille]", "right_pwm"]
 ];
 
 const joystickDeadband = 0.05;
