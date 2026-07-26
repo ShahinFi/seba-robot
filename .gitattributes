@@ -1,0 +1,2 @@
+raspberry-pi/*.sh text eol=lf
+raspberry-pi/systemd/*.service.in text eol=lf

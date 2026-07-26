@@ -2,7 +2,7 @@
 
 set -eu
 
-SERVICE_NAME="seba-robot.service"
+SERVICE_NAME="seba-web.service"
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 TEMPLATE="$SCRIPT_DIR/systemd/$SERVICE_NAME.in"

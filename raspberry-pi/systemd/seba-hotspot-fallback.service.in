@@ -1,0 +1,12 @@
+[Unit]
+Description=SEBA-ROBOT Wi-Fi hotspot fallback
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/env bash @REPO_DIR@/raspberry-pi/hotspot.sh fallback
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

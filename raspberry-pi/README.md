@@ -57,9 +57,12 @@ raspberry-pi/
 |   |-- __init__.py
 |   `-- serial_link.py
 |-- systemd/
-|   `-- seba-robot.service.in
+|   |-- seba-hotspot-fallback.service.in
+|   `-- seba-web.service.in
+|-- hotspot.sh
 |-- http_handler.py
-|-- install_service.sh
+|-- install_hotspot_fallback.sh
+|-- install_web_service.sh
 |-- requirements.txt
 `-- server.py
 ```
@@ -69,8 +72,11 @@ raspberry-pi/
 - `seba_pi/serial_link.py` maintains the UART connection, telemetry state, command queue, acknowledgements, retries, and STM32 event logs.
 - `apps/control_panel/` contains the operator control panel.
 - `apps/tuner/` contains the engineering tuner for live controller and actuator parameters.
-- `systemd/seba-robot.service.in` is the systemd service template.
-- `install_service.sh` installs and enables the systemd service on the Raspberry Pi.
+- `systemd/seba-web.service.in` is the web-server systemd service template.
+- `systemd/seba-hotspot-fallback.service.in` is the optional hotspot fallback service template.
+- `hotspot.sh` installs, starts, stops, and checks the optional Wi-Fi hotspot.
+- `install_hotspot_fallback.sh` installs the optional boot-time hotspot fallback service.
+- `install_web_service.sh` installs and enables the web-server systemd service on the Raspberry Pi.
 
 ---
 
@@ -92,17 +98,17 @@ The default baud rate is:
 
 The physical UART wiring is documented in [SEBA-ROBOT Hardware](../hardware/README.md#41-raspberry-pi-5-and-stm32g474re).
 
-The Raspberry Pi user must have permission to access the serial device. On Ubuntu, the user should be in the `dialout` group.
-
-```bash
-sudo usermod -aG dialout "$USER"
-```
-
-Log out and log back in after changing group membership.
-
 ---
 
-## 4. Python Environment
+## 4. Raspberry Pi System Setup
+
+The Raspberry Pi needs three system-level setup items before the web server can operate reliably:
+
+- a Python virtual environment with the server dependency installed
+- access to the STM32 UART device
+- network access so a browser device can reach the Pi web server
+
+### 4.1 Python environment
 
 Install the Python virtual-environment package if it is not already available:
 
@@ -127,6 +133,90 @@ The dependency list is:
 
 ```text
 pyserial>=3.5
+```
+
+### 4.2 UART and serial permissions
+
+The Raspberry Pi talks to the STM32 through the hardware UART. The default UART device used by this project is:
+
+```text
+/dev/ttyAMA0
+```
+
+The Linux user that runs the server must be able to open this device without `sudo`. On Ubuntu, add the user to the `dialout` group:
+
+```bash
+sudo usermod -aG dialout "$USER"
+```
+
+Log out and log back in after changing group membership.
+
+The Raspberry Pi firmware configuration must enable the UART pins:
+
+```text
+enable_uart=1
+```
+
+The Linux serial console must not use the robot UART. For this robot connection, the kernel command line should not contain:
+
+```text
+console=serial0,115200
+```
+
+### 4.3 Network access
+
+The Raspberry Pi web server needs the Pi to be reachable over a network.
+
+In normal use, connect the Raspberry Pi to an existing Wi-Fi or Ethernet network using the operating-system network tools. The phone, tablet, or computer used for control must be connected to the same local network.
+
+The browser does not communicate with the STM32 directly. It opens the Raspberry Pi web server over HTTP. The Raspberry Pi receives those requests, sends the corresponding UART commands to the STM32, and serves the latest STM32 telemetry back to the browser.
+
+The web server listens on all Raspberry Pi network interfaces by default:
+
+```text
+0.0.0.0:8080
+```
+
+This means the pages can be opened from another device on the same local network by using the Raspberry Pi hostname or IP address.
+
+A Raspberry Pi can also be configured as a Wi-Fi hotspot/access point. This repository provides an optional NetworkManager setup script for that mode. The hotspot is system network configuration; it is not part of the Python web server.
+
+Manual hotspot control:
+
+```bash
+bash raspberry-pi/hotspot.sh install
+bash raspberry-pi/hotspot.sh up
+bash raspberry-pi/hotspot.sh down
+bash raspberry-pi/hotspot.sh status
+```
+
+The hotspot password is supplied during `install`. For non-interactive setup, provide it as an environment variable:
+
+```bash
+SEBA_HOTSPOT_PASSWORD='change-this-password' bash raspberry-pi/hotspot.sh install
+```
+
+Default hotspot settings:
+
+| Item | Value |
+|---|---:|
+| NetworkManager connection | `seba-hotspot` |
+| Wi-Fi interface | `wlan0` |
+| Wi-Fi SSID | `SEBA-ROBOT` |
+| Raspberry Pi hotspot address | `10.42.0.1` |
+| control panel URL | `http://10.42.0.1:8080/control` |
+| tuner URL | `http://10.42.0.1:8080/tuner` |
+
+The hotspot is not enabled automatically by `hotspot.sh install`. Start it manually with:
+
+```bash
+bash raspberry-pi/hotspot.sh up
+```
+
+Optional automatic fallback can be installed separately after `hotspot.sh install` has created the NetworkManager hotspot connection. The fallback service waits after boot, checks whether a normal network route is usable, and starts the `SEBA-ROBOT` hotspot only if the normal network is unavailable.
+
+```bash
+bash raspberry-pi/install_hotspot_fallback.sh
 ```
 
 ---
@@ -179,10 +269,11 @@ http://<raspberry-pi-ip>:8080/control
 The control panel provides:
 
 - balance start and stop
-- emergency actuator stop
+- emergency stop button
 - STM32 reset hold button
 - joystick drive and turn commands
 - drive-speed and turn-speed limits
+- stop motion command that zeros the requested drive and turn speeds
 - robot state and actuator telemetry
 - fault banner
 - STM32 event log
@@ -293,13 +384,13 @@ Create the Python environment and install the dependencies before installing the
 Run from the repository root:
 
 ```bash
-bash raspberry-pi/install_service.sh
+bash raspberry-pi/install_web_service.sh
 ```
 
 The installer writes:
 
 ```text
-/etc/systemd/system/seba-robot.service
+/etc/systemd/system/seba-web.service
 ```
 
 It then reloads systemd, enables the service, restarts it, and prints the service status.
@@ -315,7 +406,7 @@ The service uses:
 Optional install-time overrides:
 
 ```bash
-SEBA_SERIAL=/dev/ttyAMA0 SEBA_WEB_PORT=8080 bash raspberry-pi/install_service.sh
+SEBA_SERIAL=/dev/ttyAMA0 SEBA_WEB_PORT=8080 bash raspberry-pi/install_web_service.sh
 ```
 
 | Environment variable | Purpose | Default |
@@ -327,21 +418,21 @@ SEBA_SERIAL=/dev/ttyAMA0 SEBA_WEB_PORT=8080 bash raspberry-pi/install_service.sh
 Useful service commands:
 
 ```bash
-sudo systemctl status seba-robot.service
-sudo systemctl restart seba-robot.service
-sudo systemctl stop seba-robot.service
-sudo systemctl disable seba-robot.service
+sudo systemctl status seba-web.service
+sudo systemctl restart seba-web.service
+sudo systemctl stop seba-web.service
+sudo systemctl disable seba-web.service
 ```
 
 View server logs:
 
 ```bash
-sudo journalctl -u seba-robot.service -f
+sudo journalctl -u seba-web.service -f
 ```
 
 ---
 
-## 9. Serial Troubleshooting
+## 9. Verification and Troubleshooting
 
 Check that the UART device exists:
 
@@ -367,10 +458,22 @@ Check that the Raspberry Pi serial console is not using the robot UART. For this
 cat /boot/firmware/cmdline.txt
 ```
 
-The firmware configuration should enable the UART pins:
+Check that the Raspberry Pi firmware configuration enables the UART pins:
 
-```text
-enable_uart=1
+```bash
+grep enable_uart /boot/firmware/config.txt
+```
+
+Check that the web service is running:
+
+```bash
+sudo systemctl status seba-web.service
+```
+
+Check that the web server responds locally on the Pi:
+
+```bash
+curl -I http://127.0.0.1:8080/control
 ```
 
 If the webpage shows stale telemetry or serial errors, check:
