@@ -73,9 +73,9 @@ raspberry-pi/
 - `apps/control_panel/` contains the operator control panel.
 - `apps/tuner/` contains the engineering tuner for live controller and actuator parameters.
 - `systemd/seba-web.service.in` is the web-server systemd service template.
-- `systemd/seba-hotspot-fallback.service.in` is the optional hotspot fallback service template.
+- `systemd/seba-hotspot-fallback.service.in` is the optional hotspot monitor service template.
 - `hotspot.sh` installs, starts, stops, and checks the optional Wi-Fi hotspot.
-- `install_hotspot_fallback.sh` installs the optional boot-time hotspot fallback service.
+- `install_hotspot_fallback.sh` installs the optional hotspot monitor service.
 - `install_web_service.sh` installs and enables the web-server systemd service on the Raspberry Pi.
 
 ---
@@ -102,19 +102,70 @@ The physical UART wiring is documented in [SEBA-ROBOT Hardware](../hardware/READ
 
 ## 4. Raspberry Pi System Setup
 
-The Raspberry Pi needs three system-level setup items before the web server can operate reliably:
+The Raspberry Pi needs four setup items before the web server can operate reliably:
 
+- required operating-system packages
 - a Python virtual environment with the server dependency installed
 - access to the STM32 UART device
 - network access so a browser device can reach the Pi web server
 
-### 4.1 Python environment
+### 4.1 Operating-system packages
 
-Install the Python virtual-environment package if it is not already available:
+Install the required base packages:
 
 ```bash
-sudo apt install python3-venv
+sudo apt update
+sudo apt install -y python3-venv python3-pip
 ```
+
+Required package purpose:
+
+| Package | Purpose |
+|---|---|
+| `python3-venv` | creates the project virtual environment |
+| `python3-pip` | installs Python dependencies inside the virtual environment |
+
+The optional hotspot mode requires NetworkManager:
+
+```bash
+sudo apt install -y network-manager
+sudo systemctl enable --now NetworkManager
+nmcli device status
+```
+
+| Package | Purpose |
+|---|---|
+| `network-manager` | provides `nmcli` and manages the optional Wi-Fi hotspot connection |
+
+For hotspot mode, the Wi-Fi interface must be managed by NetworkManager. On Ubuntu images that use `systemd-networkd`, configure netplan to use NetworkManager:
+
+```bash
+sudo tee /etc/netplan/99-seba-networkmanager.yaml >/dev/null <<'EOF'
+network:
+  version: 2
+  renderer: NetworkManager
+EOF
+
+sudo chmod 600 /etc/netplan/99-seba-networkmanager.yaml
+sudo netplan generate
+sudo netplan apply
+```
+
+`netplan apply` can briefly interrupt SSH because it restarts network configuration.
+
+Check the result:
+
+```bash
+nmcli device status
+networkctl status wlan0 --no-pager
+```
+
+Expected result:
+
+- `nmcli` shows `wlan0` as `connected` or `disconnected`, not `unavailable`
+- `networkctl` does not show a `systemd-networkd` network file managing `wlan0`
+
+### 4.2 Python environment
 
 Create and activate the virtual environment from the repository root:
 
@@ -135,7 +186,7 @@ The dependency list is:
 pyserial>=3.5
 ```
 
-### 4.2 UART and serial permissions
+### 4.3 UART and serial permissions
 
 The Raspberry Pi talks to the STM32 through the hardware UART. The default UART device used by this project is:
 
@@ -163,7 +214,7 @@ The Linux serial console must not use the robot UART. For this robot connection,
 console=serial0,115200
 ```
 
-### 4.3 Network access
+### 4.4 Network access
 
 The Raspberry Pi web server needs the Pi to be reachable over a network.
 
@@ -190,7 +241,7 @@ bash raspberry-pi/hotspot.sh down
 bash raspberry-pi/hotspot.sh status
 ```
 
-The hotspot password is supplied during `install`. For non-interactive setup, provide it as an environment variable:
+The `install` command creates or updates the hotspot profile and sets its password. The password must be 8 to 63 characters. For non-interactive setup, provide it as an environment variable:
 
 ```bash
 SEBA_HOTSPOT_PASSWORD='change-this-password' bash raspberry-pi/hotspot.sh install
@@ -213,11 +264,13 @@ The hotspot is not enabled automatically by `hotspot.sh install`. Start it manua
 bash raspberry-pi/hotspot.sh up
 ```
 
-Optional automatic fallback can be installed separately after `hotspot.sh install` has created the NetworkManager hotspot connection. The fallback service waits after boot, checks whether a normal network route is usable, and starts the `SEBA-ROBOT` hotspot only if the normal network is unavailable.
+Optional automatic hotspot fallback can be installed separately after `hotspot.sh install` has created the NetworkManager hotspot connection. The service waits after boot, monitors normal network access, and starts the `SEBA-ROBOT` hotspot if normal network access is unavailable or lost later.
 
 ```bash
 bash raspberry-pi/install_hotspot_fallback.sh
 ```
+
+Once the fallback service starts the hotspot, it leaves the Raspberry Pi in hotspot mode. It does not automatically switch back to normal Wi-Fi when the previous network returns.
 
 ---
 
@@ -474,6 +527,13 @@ Check that the web server responds locally on the Pi:
 
 ```bash
 curl -I http://127.0.0.1:8080/control
+```
+
+Check hotspot state and fallback service state:
+
+```bash
+bash raspberry-pi/hotspot.sh status
+sudo systemctl status seba-hotspot-fallback.service --no-pager
 ```
 
 If the webpage shows stale telemetry or serial errors, check:

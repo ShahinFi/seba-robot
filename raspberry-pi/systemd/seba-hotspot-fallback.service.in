@@ -4,9 +4,10 @@ After=NetworkManager.service
 Wants=NetworkManager.service
 
 [Service]
-Type=oneshot
-ExecStart=/usr/bin/env bash @REPO_DIR@/raspberry-pi/hotspot.sh fallback
-RemainAfterExit=yes
+Type=simple
+ExecStart=/usr/bin/env bash @REPO_DIR@/raspberry-pi/hotspot.sh monitor
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
