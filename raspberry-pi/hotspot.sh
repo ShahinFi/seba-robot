@@ -7,6 +7,7 @@ HOTSPOT_SSID="${SEBA_HOTSPOT_SSID:-SEBA-ROBOT}"
 HOTSPOT_IFACE="${SEBA_HOTSPOT_IFACE:-wlan0}"
 HOTSPOT_IP="${SEBA_HOTSPOT_IP:-10.42.0.1/24}"
 HOTSPOT_URL_IP="${HOTSPOT_IP%%/*}"
+HOTSPOT_CHANNEL="${SEBA_HOTSPOT_CHANNEL:-11}"
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 LOG_FILE="${SEBA_HOTSPOT_LOG:-$SCRIPT_DIR/hotspot.log}"
 FALLBACK_WAIT_SECONDS="${SEBA_HOTSPOT_FALLBACK_WAIT:-45}"
@@ -31,6 +32,7 @@ Environment:
   SEBA_HOTSPOT_SSID        Wi-Fi name. Default: SEBA-ROBOT.
   SEBA_HOTSPOT_IFACE       Wi-Fi interface. Default: wlan0.
   SEBA_HOTSPOT_IP          Hotspot address. Default: 10.42.0.1/24.
+  SEBA_HOTSPOT_CHANNEL     2.4 GHz channel. Default: 11.
   SEBA_HOTSPOT_FALLBACK_WAIT
                            Seconds to wait before fallback/monitor checks.
   SEBA_HOTSPOT_MONITOR_INTERVAL
@@ -93,28 +95,37 @@ install_hotspot() {
         exit 1
     fi
 
-    if connection_exists; then
-        sudo nmcli connection delete "$HOTSPOT_CONNECTION" >/dev/null
+    if ! connection_exists; then
+        sudo nmcli connection add \
+            type wifi \
+            ifname "$HOTSPOT_IFACE" \
+            con-name "$HOTSPOT_CONNECTION" \
+            autoconnect no \
+            ssid "$HOTSPOT_SSID" >/dev/null
     fi
 
-    sudo nmcli connection add \
-        type wifi \
-        ifname "$HOTSPOT_IFACE" \
-        con-name "$HOTSPOT_CONNECTION" \
-        autoconnect no \
-        ssid "$HOTSPOT_SSID" >/dev/null
-
     sudo nmcli connection modify "$HOTSPOT_CONNECTION" \
+        connection.autoconnect no \
+        connection.interface-name "$HOTSPOT_IFACE" \
+        802-11-wireless.ssid "$HOTSPOT_SSID" \
         802-11-wireless.mode ap \
         802-11-wireless.band bg \
+        802-11-wireless.channel "$HOTSPOT_CHANNEL" \
+        802-11-wireless.hidden no \
+        802-11-wireless.powersave 2 \
         ipv4.method shared \
         ipv4.addresses "$HOTSPOT_IP" \
         ipv6.method disabled \
         wifi-sec.key-mgmt wpa-psk \
-        wifi-sec.psk "$password"
+        wifi-sec.psk "$password" \
+        wifi-sec.proto rsn \
+        wifi-sec.pairwise ccmp \
+        wifi-sec.group ccmp \
+        wifi-sec.pmf 2
 
     echo "Installed hotspot connection: $HOTSPOT_CONNECTION"
     echo "SSID: $HOTSPOT_SSID"
+    echo "Channel: $HOTSPOT_CHANNEL"
     echo "Address: $HOTSPOT_URL_IP"
 }
 

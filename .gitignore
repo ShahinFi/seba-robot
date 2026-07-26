@@ -4,3 +4,4 @@ control/simulink/slprj
 __pycache__/
 *.py[cod]
 raspberry-pi/hotspot.log
+raspberry-pi/.install-state

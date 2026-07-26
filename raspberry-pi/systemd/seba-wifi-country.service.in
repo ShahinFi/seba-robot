@@ -1,0 +1,13 @@
+[Unit]
+Description=SEBA-ROBOT Wi-Fi regulatory country
+DefaultDependencies=no
+Before=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/iw reg set @WIFI_COUNTRY@
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
