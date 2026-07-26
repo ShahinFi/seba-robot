@@ -8,13 +8,28 @@ The Raspberry Pi software is not part of the real-time balance loop. Real-time s
 
 ---
 
-## 1. Software Overview
+## 1. Supported Platform
 
-The Raspberry Pi software has three main parts:
+The supported Raspberry Pi target is:
+
+```text
+Raspberry Pi 5
+Ubuntu Server 24.04 LTS 64-bit
+```
+
+Other operating systems are not covered because package names, boot files, UART naming, netplan behavior, and service management can differ.
+
+---
+
+## 2. Software Overview
+
+The Raspberry Pi software has five main parts:
 
 - one shared Python HTTP server
 - one reusable STM32 serial-link module
 - two browser applications
+- a staged Raspberry Pi installer
+- NetworkManager-based hotspot and fallback tooling
 
 ```text
 +----------------------------+
@@ -36,55 +51,151 @@ The Raspberry Pi software has three main parts:
 +----------------------------+
 ```
 
-The shared server keeps one UART connection to the STM32. Both web applications use this same connection through the same backend API.
+The shared server keeps one UART connection to the STM32. Both browser applications use this same connection through the same backend API.
 
 ---
 
-## 2. Directory Structure
+## 3. Directory Structure
 
 ```text
 raspberry-pi/
-|-- apps/
-|   |-- control_panel/
-|   |   |-- app.js
-|   |   |-- index.html
-|   |   `-- styles.css
-|   `-- tuner/
-|       |-- app.js
-|       |-- index.html
-|       `-- styles.css
 |-- seba_pi/
 |   |-- __init__.py
 |   `-- serial_link.py
+|-- setup/
+|   |-- common.sh
+|   |-- network.sh
+|   |-- packages.sh
+|   |-- services.sh
+|   |-- uart.sh
+|   `-- verify.sh
 |-- systemd/
 |   |-- seba-hotspot-fallback.service.in
-|   `-- seba-web.service.in
+|   |-- seba-web.service.in
+|   `-- seba-wifi-country.service.in
+|-- web/
+|   |-- apps/
+|   |   |-- control_panel/
+|   |   |   |-- app.js
+|   |   |   |-- index.html
+|   |   |   `-- styles.css
+|   |   `-- tuner/
+|   |       |-- app.js
+|   |       |-- index.html
+|   |       `-- styles.css
+|   |-- http_handler.py
+|   `-- server.py
 |-- hotspot.sh
-|-- http_handler.py
-|-- install_hotspot_fallback.sh
-|-- install_web_service.sh
+|-- install.sh
 |-- requirements.txt
-`-- server.py
+`-- README.md
 ```
 
-- `server.py` is the executable entry point for the Raspberry Pi web server.
-- `http_handler.py` contains the HTTP routes and JSON API handlers.
-- `seba_pi/serial_link.py` maintains the UART connection, telemetry state, command queue, acknowledgements, retries, and STM32 event logs.
-- `apps/control_panel/` contains the operator control panel.
-- `apps/tuner/` contains the engineering tuner for live controller and actuator parameters.
-- `systemd/seba-web.service.in` is the web-server systemd service template.
-- `systemd/seba-hotspot-fallback.service.in` is the optional hotspot monitor service template.
-- `hotspot.sh` installs, starts, stops, and checks the optional Wi-Fi hotspot.
-- `install_hotspot_fallback.sh` installs the optional hotspot monitor service.
-- `install_web_service.sh` installs and enables the web-server systemd service on the Raspberry Pi.
+| Path | Purpose |
+|---|---|
+| `web/server.py` | executable entry point for the Raspberry Pi web server |
+| `web/http_handler.py` | HTTP routes and JSON API handlers |
+| `web/apps/control_panel/` | operator control panel |
+| `web/apps/tuner/` | engineering tuner |
+| `seba_pi/serial_link.py` | UART connection, telemetry state, command queue, ACK handling, retries, and STM32 event logs |
+| `install.sh` | public staged installer |
+| `setup/` | installer stages used by `install.sh` |
+| `systemd/` | systemd service templates |
+| `hotspot.sh` | manual and service-driven hotspot control tool |
 
 ---
 
-## 3. Hardware Interface
+## 4. Fresh Installation
 
-The Raspberry Pi communicates with the STM32 through UART.
+Start from a fresh Ubuntu Server image, enable SSH during imaging or first boot, give the Pi temporary Internet access, and clone the repository:
 
-The default serial device is:
+```bash
+git clone https://github.com/ShahinFi/seba-robot.git
+cd seba-robot
+```
+
+Run the staged installer from the repository root:
+
+```bash
+bash raspberry-pi/install.sh all
+```
+
+The same installer can run individual stages:
+
+```bash
+bash raspberry-pi/install.sh packages
+bash raspberry-pi/install.sh uart
+bash raspberry-pi/install.sh network
+bash raspberry-pi/install.sh services
+bash raspberry-pi/install.sh verify
+```
+
+The `all` command stops at the first failed stage. Each stage is intended to be idempotent: running it again updates SEBA-owned configuration instead of creating duplicate services, netplan files, or NetworkManager profiles.
+
+Interactive prompts are the default for values that are specific to the local robot or network. Non-interactive setup can be done with environment variables:
+
+```bash
+SEBA_NONINTERACTIVE=1 \
+SEBA_HOTSPOT_PASSWORD='change-this-password' \
+SEBA_WIFI_COUNTRY=FI \
+bash raspberry-pi/install.sh all
+```
+
+The installer records the resolved repository path and Linux user in:
+
+```text
+raspberry-pi/.install-state
+```
+
+Systemd services are generated from the current repository path and current user unless overridden.
+
+---
+
+## 5. Installer Stages
+
+### 5.1 Packages
+
+The package stage installs the operating-system packages used by the Raspberry Pi software:
+
+| Package | Purpose |
+|---|---|
+| `git` | repository access |
+| `python3`, `python3-venv`, `python3-pip` | Python runtime and project virtual environment |
+| `network-manager` | NetworkManager and `nmcli` for Wi-Fi and hotspot control |
+| `iw`, `rfkill` | Wi-Fi regulatory and radio diagnostics |
+| `curl` | local web endpoint verification |
+
+It also creates `.venv` in the repository root and installs:
+
+```text
+pyserial>=3.5
+```
+
+### 5.2 UART
+
+The UART stage configures the Raspberry Pi hardware UART used for the STM32 link.
+
+The physical wiring is:
+
+- Raspberry Pi TX to STM32 RX
+- Raspberry Pi RX to STM32 TX
+- Raspberry Pi GND to STM32 GND
+- 3.3 V UART logic
+
+The detailed physical connector wiring is documented in [SEBA-ROBOT Hardware](../hardware/README.md#41-raspberry-pi-5-and-stm32g474re).
+
+The UART stage updates:
+
+- `/boot/firmware/config.txt`
+- `/boot/firmware/cmdline.txt`
+
+It ensures:
+
+- `enable_uart=1`
+- `console=serial0,115200` is removed from the kernel command line
+- the install user belongs to `dialout`
+
+The default UART device is:
 
 ```text
 /dev/ttyAMA0
@@ -96,129 +207,129 @@ The default baud rate is:
 115200
 ```
 
-The physical UART wiring is documented in [SEBA-ROBOT Hardware](../hardware/README.md#41-raspberry-pi-5-and-stm32g474re).
+### 5.3 Network
+
+The network stage configures the Raspberry Pi so a browser device can reach the Pi web server through normal Wi-Fi, Ethernet recovery, or the SEBA hotspot.
+
+Network ownership rule:
+
+- NetworkManager owns Wi-Fi.
+- Netplan selects NetworkManager as the renderer.
+- Standalone `hostapd` and standalone `dnsmasq` are not used.
+- `systemd-networkd` must not manage `wlan0`.
+
+The network stage writes the SEBA-owned netplan file:
+
+```text
+/etc/netplan/99-seba-network.yaml
+```
+
+It backs up any previous file at that path, validates netplan, and configures:
+
+- NetworkManager as the netplan renderer
+- Ethernet recovery on `eth0`
+- the Wi-Fi regulatory country service
+- the NetworkManager hotspot profile
+
+Default network values:
+
+| Item | Default |
+|---|---:|
+| Ethernet recovery address | `192.168.10.50/24` |
+| Wi-Fi regulatory country | `FI` |
+| hotspot SSID | `SEBA-ROBOT` |
+| hotspot channel | `11` |
+| hotspot address | `10.42.0.1/24` |
+
+These are the tested project defaults. Override them when needed:
+
+```bash
+SEBA_WIFI_COUNTRY=US \
+SEBA_HOTSPOT_CHANNEL=6 \
+SEBA_ETH_ADDRESS=192.168.10.50/24 \
+bash raspberry-pi/install.sh network
+```
+
+The Ethernet recovery address is intended for direct maintenance access while changing Wi-Fi modes. Configure the computer on the other end of the Ethernet cable with another address in `192.168.10.0/24`, then connect with:
+
+```bash
+ssh <user>@192.168.10.50
+```
+
+Normal Wi-Fi credentials are not stored in the repository. To let the network stage create or update a normal Wi-Fi connection, provide them through environment variables:
+
+```bash
+SEBA_WIFI_SSID='router-name' \
+SEBA_WIFI_PASSWORD='router-password' \
+bash raspberry-pi/install.sh network
+```
+
+If the NetworkManager connection name is different from the SSID, set `SEBA_WIFI_CONNECTION` to the saved profile name.
+
+### 5.4 Services
+
+The service stage installs and updates the systemd services used by the Raspberry Pi software:
+
+| Service | Purpose |
+|---|---|
+| `seba-web.service` | runs the Python web server |
+| `seba-hotspot-fallback.service` | monitors normal network access and starts the hotspot when needed |
+| `seba-wifi-country.service` | applies the Wi-Fi regulatory country before NetworkManager starts |
+
+The service stage writes:
+
+```text
+/etc/systemd/system/seba-web.service
+/etc/systemd/system/seba-hotspot-fallback.service
+/etc/systemd/system/seba-wifi-country.service
+```
+
+Generated service units are checked with `systemd-analyze verify` before installation. The installer reloads systemd, enables the services, restarts them, and prints their status.
+
+The web service uses:
+
+- the current repository path
+- the current Linux user
+- `.venv/bin/python3` if it exists
+- `/dev/ttyAMA0` unless overridden
+- port `8080` unless overridden
+
+Optional install-time overrides:
+
+```bash
+SEBA_SERIAL=/dev/ttyAMA0 SEBA_WEB_PORT=8080 bash raspberry-pi/install.sh services
+```
+
+| Environment variable | Purpose | Default |
+|---|---|---:|
+| `SEBA_SERVICE_USER` | Linux user that runs the service | current user |
+| `SEBA_SERIAL` | STM32 UART device used by the service | `/dev/ttyAMA0` |
+| `SEBA_WEB_PORT` | HTTP port used by the service | `8080` |
+
+### 5.5 Verify
+
+The verify stage checks the installed Raspberry Pi environment and exits with a nonzero status if a required condition is not met.
+
+Run:
+
+```bash
+bash raspberry-pi/install.sh verify
+```
+
+The final line is one of:
+
+```text
+SEBA Raspberry Pi setup: PASS
+SEBA Raspberry Pi setup: FAIL
+```
+
+On failure, the script lists only the failed checks.
 
 ---
 
-## 4. Raspberry Pi System Setup
+## 6. Network and Hotspot Operation
 
-The Raspberry Pi needs four setup items before the web server can operate reliably:
-
-- required operating-system packages
-- a Python virtual environment with the server dependency installed
-- access to the STM32 UART device
-- network access so a browser device can reach the Pi web server
-
-### 4.1 Operating-system packages
-
-Install the required base packages:
-
-```bash
-sudo apt update
-sudo apt install -y python3-venv python3-pip
-```
-
-Required package purpose:
-
-| Package | Purpose |
-|---|---|
-| `python3-venv` | creates the project virtual environment |
-| `python3-pip` | installs Python dependencies inside the virtual environment |
-
-The optional hotspot mode requires NetworkManager:
-
-```bash
-sudo apt install -y network-manager
-sudo systemctl enable --now NetworkManager
-nmcli device status
-```
-
-| Package | Purpose |
-|---|---|
-| `network-manager` | provides `nmcli` and manages the optional Wi-Fi hotspot connection |
-
-For hotspot mode, the Wi-Fi interface must be managed by NetworkManager. On Ubuntu images that use `systemd-networkd`, configure netplan to use NetworkManager:
-
-```bash
-sudo tee /etc/netplan/99-seba-networkmanager.yaml >/dev/null <<'EOF'
-network:
-  version: 2
-  renderer: NetworkManager
-EOF
-
-sudo chmod 600 /etc/netplan/99-seba-networkmanager.yaml
-sudo netplan generate
-sudo netplan apply
-```
-
-`netplan apply` can briefly interrupt SSH because it restarts network configuration.
-
-Check the result:
-
-```bash
-nmcli device status
-networkctl status wlan0 --no-pager
-```
-
-Expected result:
-
-- `nmcli` shows `wlan0` as `connected` or `disconnected`, not `unavailable`
-- `networkctl` does not show a `systemd-networkd` network file managing `wlan0`
-
-### 4.2 Python environment
-
-Create and activate the virtual environment from the repository root:
-
-```bash
-python3 -m venv .venv
-. .venv/bin/activate
-```
-
-Install the Raspberry Pi server dependencies:
-
-```bash
-pip install -r raspberry-pi/requirements.txt
-```
-
-The dependency list is:
-
-```text
-pyserial>=3.5
-```
-
-### 4.3 UART and serial permissions
-
-The Raspberry Pi talks to the STM32 through the hardware UART. The default UART device used by this project is:
-
-```text
-/dev/ttyAMA0
-```
-
-The Linux user that runs the server must be able to open this device without `sudo`. On Ubuntu, add the user to the `dialout` group:
-
-```bash
-sudo usermod -aG dialout "$USER"
-```
-
-Log out and log back in after changing group membership.
-
-The Raspberry Pi firmware configuration must enable the UART pins:
-
-```text
-enable_uart=1
-```
-
-The Linux serial console must not use the robot UART. For this robot connection, the kernel command line should not contain:
-
-```text
-console=serial0,115200
-```
-
-### 4.4 Network access
-
-The Raspberry Pi web server needs the Pi to be reachable over a network.
-
-In normal use, connect the Raspberry Pi to an existing Wi-Fi or Ethernet network using the operating-system network tools. The phone, tablet, or computer used for control must be connected to the same local network.
+In normal use, connect the Raspberry Pi to an existing Wi-Fi or Ethernet network using NetworkManager. The phone, tablet, or computer used for control must be connected to the same local network.
 
 The browser does not communicate with the STM32 directly. It opens the Raspberry Pi web server over HTTP. The Raspberry Pi receives those requests, sends the corresponding UART commands to the STM32, and serves the latest STM32 telemetry back to the browser.
 
@@ -230,9 +341,40 @@ The web server listens on all Raspberry Pi network interfaces by default:
 
 This means the pages can be opened from another device on the same local network by using the Raspberry Pi hostname or IP address.
 
-A Raspberry Pi can also be configured as a Wi-Fi hotspot/access point. This repository provides an optional NetworkManager setup script for that mode. The hotspot is system network configuration; it is not part of the Python web server.
+### 6.1 Hotspot Profile
 
-Manual hotspot control:
+The hotspot profile is named:
+
+```text
+seba-hotspot
+```
+
+The profile uses:
+
+- AP mode on `wlan0`
+- 2.4 GHz band
+- WPA2/RSN with CCMP
+- PMF optional
+- IPv4 shared mode
+- IPv6 disabled
+- Wi-Fi power saving disabled
+- autoconnect disabled
+
+Default hotspot settings:
+
+| Item | Value |
+|---|---:|
+| NetworkManager connection | `seba-hotspot` |
+| Wi-Fi interface | `wlan0` |
+| Wi-Fi SSID | `SEBA-ROBOT` |
+| Raspberry Pi hotspot address | `10.42.0.1` |
+| default hotspot channel | `11` |
+| control panel URL | `http://10.42.0.1:8080/control` |
+| tuner URL | `http://10.42.0.1:8080/tuner` |
+
+### 6.2 Manual Hotspot Control
+
+`hotspot.sh` is the manual and service-driven hotspot control tool:
 
 ```bash
 bash raspberry-pi/hotspot.sh install
@@ -247,45 +389,42 @@ The `install` command creates or updates the hotspot profile and sets its passwo
 SEBA_HOTSPOT_PASSWORD='change-this-password' bash raspberry-pi/hotspot.sh install
 ```
 
-Default hotspot settings:
-
-| Item | Value |
-|---|---:|
-| NetworkManager connection | `seba-hotspot` |
-| Wi-Fi interface | `wlan0` |
-| Wi-Fi SSID | `SEBA-ROBOT` |
-| Raspberry Pi hotspot address | `10.42.0.1` |
-| control panel URL | `http://10.42.0.1:8080/control` |
-| tuner URL | `http://10.42.0.1:8080/tuner` |
-
 The hotspot is not enabled automatically by `hotspot.sh install`. Start it manually with:
 
 ```bash
 bash raspberry-pi/hotspot.sh up
 ```
 
-Optional automatic hotspot fallback can be installed separately after `hotspot.sh install` has created the NetworkManager hotspot connection. The service waits after boot, monitors normal network access, and starts the `SEBA-ROBOT` hotspot if normal network access is unavailable or lost later.
+### 6.3 Fallback Behavior
 
-```bash
-bash raspberry-pi/install_hotspot_fallback.sh
-```
+The hotspot fallback service waits after boot, monitors normal network access, and starts the `SEBA-ROBOT` hotspot if normal network access is unavailable or lost later.
 
 Once the fallback service starts the hotspot, it leaves the Raspberry Pi in hotspot mode. It does not automatically switch back to normal Wi-Fi when the previous network returns.
 
+Return to normal Wi-Fi is manual:
+
+```bash
+bash raspberry-pi/hotspot.sh down
+sudo nmcli connection up "<normal-wifi-profile>"
+sudo systemctl restart seba-hotspot-fallback.service
+```
+
+The hotspot fallback service can become inactive after it successfully starts the hotspot. That is normal for the one-way fallback policy.
+
 ---
 
-## 5. Running Manually
+## 7. Running Manually
 
 Run the web server from the repository root:
 
 ```bash
-python3 raspberry-pi/server.py --serial /dev/ttyAMA0 --port 8080
+python3 raspberry-pi/web/server.py --serial /dev/ttyAMA0 --port 8080
 ```
 
 The same settings can be provided through environment variables:
 
 ```bash
-SEBA_SERIAL=/dev/ttyAMA0 SEBA_BAUD=115200 SEBA_WEB_HOST=0.0.0.0 SEBA_WEB_PORT=8080 python3 raspberry-pi/server.py
+SEBA_SERIAL=/dev/ttyAMA0 SEBA_BAUD=115200 SEBA_WEB_HOST=0.0.0.0 SEBA_WEB_PORT=8080 python3 raspberry-pi/web/server.py
 ```
 
 Runtime settings:
@@ -299,11 +438,11 @@ Runtime settings:
 
 ---
 
-## 6. Web Interfaces
+## 8. Web Interfaces
 
 The server provides two browser interfaces.
 
-### 6.1 Control Panel
+### 8.1 Control Panel
 
 The control panel is the operator interface:
 
@@ -335,7 +474,7 @@ On desktop and portrait mobile screens, the control panel uses a stacked respons
 
 Joystick commands are sent repeatedly while the joystick is held away from center. When the joystick is released, the command returns to zero.
 
-### 6.2 Engineering Tuner
+### 8.2 Engineering Tuner
 
 The tuner is the engineering interface:
 
@@ -370,11 +509,11 @@ The tuner is used for development and parameter adjustment. The control panel is
 
 ---
 
-## 7. HTTP API
+## 9. HTTP API
 
 The browser applications use the shared JSON API.
 
-### Telemetry
+### 9.1 Telemetry
 
 ```text
 GET /api/telemetry
@@ -388,7 +527,7 @@ The telemetry response contains:
 - command queue and acknowledgement status
 - STM32 text and event logs collected since the previous request
 
-### Commands
+### 9.2 Commands
 
 ```text
 POST /api/command
@@ -428,64 +567,33 @@ The following urgent commands replace queued commands so they are not delayed be
 
 ---
 
-## 8. Autostart Service
-
-The Raspberry Pi server can be installed as a systemd service.
-
-Create the Python environment and install the dependencies before installing the service.
-
-Run from the repository root:
-
-```bash
-bash raspberry-pi/install_web_service.sh
-```
-
-The installer writes:
-
-```text
-/etc/systemd/system/seba-web.service
-```
-
-It then reloads systemd, enables the service, restarts it, and prints the service status.
-
-The service uses:
-
-- the current repository path
-- the current Linux user
-- `.venv/bin/python3` if it exists
-- `/dev/ttyAMA0` unless overridden
-- port `8080` unless overridden
-
-Optional install-time overrides:
-
-```bash
-SEBA_SERIAL=/dev/ttyAMA0 SEBA_WEB_PORT=8080 bash raspberry-pi/install_web_service.sh
-```
-
-| Environment variable | Purpose | Default |
-|---|---|---:|
-| `SEBA_SERVICE_USER` | Linux user that runs the service | current user |
-| `SEBA_SERIAL` | STM32 UART device used by the service | `/dev/ttyAMA0` |
-| `SEBA_WEB_PORT` | HTTP port used by the service | `8080` |
+## 10. Service Commands and Logs
 
 Useful service commands:
 
 ```bash
 sudo systemctl status seba-web.service
-sudo systemctl restart seba-web.service
-sudo systemctl stop seba-web.service
-sudo systemctl disable seba-web.service
+sudo systemctl status seba-hotspot-fallback.service
+sudo systemctl status seba-wifi-country.service
 ```
 
-View server logs:
+View logs:
 
 ```bash
 sudo journalctl -u seba-web.service -f
+sudo journalctl -u seba-hotspot-fallback.service -f
+sudo journalctl -u seba-wifi-country.service -f
 ```
 
 ---
 
-## 9. Verification and Troubleshooting
+## 11. Verification and Troubleshooting
+
+Run the full verification stage:
+
+```bash
+bash raspberry-pi/install.sh verify
+```
 
 Check that the UART device exists:
 
@@ -517,12 +625,6 @@ Check that the Raspberry Pi firmware configuration enables the UART pins:
 grep enable_uart /boot/firmware/config.txt
 ```
 
-Check that the web service is running:
-
-```bash
-sudo systemctl status seba-web.service
-```
-
 Check that the web server responds locally on the Pi:
 
 ```bash
@@ -535,6 +637,15 @@ Check hotspot state and fallback service state:
 bash raspberry-pi/hotspot.sh status
 sudo systemctl status seba-hotspot-fallback.service --no-pager
 ```
+
+Final manual acceptance test:
+
+1. Boot with router Wi-Fi available and confirm normal Wi-Fi connects.
+2. Disconnect normal Wi-Fi and confirm the `SEBA-ROBOT` hotspot starts.
+3. Connect a phone or laptop to the hotspot and confirm it receives a `10.42.0.x` address.
+4. Open `http://10.42.0.1:8080/control`.
+5. Return manually to normal Wi-Fi if needed.
+6. Reboot and confirm the settings persist.
 
 If the webpage shows stale telemetry or serial errors, check:
 

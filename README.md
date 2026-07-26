@@ -17,7 +17,7 @@ The implemented work covers six main areas:
 - **Simulation and evaluation:** a nonlinear Simulink and Simscape Multibody model with four documented test cases, result plots, and animations
 - **Hardware system:** built physical robot hardware, including power distribution, STM32 connections, motor driver, sensors, wiring, and mechanical electronics layout
 - **STM32 firmware:** real-time PlatformIO firmware for state estimation, balance and motion control, actuator current control, telemetry, safety handling, motor control, encoder reading, IMU acquisition, and current sensing
-- **Raspberry Pi software:** Python web server with an operator control panel, engineering tuner, STM32 UART communication, telemetry display, command handling, and autostart service
+- **Raspberry Pi software:** Python web server with an operator control panel, engineering tuner, STM32 UART communication, telemetry display, command handling, staged installation, autostart service, and hotspot fallback support
 
 ---
 
@@ -51,7 +51,7 @@ Real-time PlatformIO firmware for STM32G474RE sensing, state estimation, balance
 
 [**Raspberry Pi Software**](raspberry-pi/README.md)
 
-Python web server, operator control panel, engineering tuner, STM32 UART communication, telemetry, command handling, and autostart service.
+Python web server, operator control panel, engineering tuner, STM32 UART communication, telemetry, command handling, staged Raspberry Pi setup, autostart service, and hotspot fallback support.
 
 ---
 
@@ -93,10 +93,16 @@ seba-robot/
 |       `-- src/
 |-- raspberry-pi/
 |   |-- README.md
-|   |-- apps/
+|   |-- requirements.txt
 |   |-- seba_pi/
+|   |-- setup/
 |   |-- systemd/
-|   `-- server.py
+|   |-- web/
+|   |   |-- apps/
+|   |   |-- http_handler.py
+|   |   `-- server.py
+|   |-- hotspot.sh
+|   `-- install.sh
 |-- LICENSE
 `-- README.md
 ```
@@ -105,7 +111,7 @@ seba-robot/
 - `control/simulink/` contains the simulation model, simulation documentation, and test results.
 - `hardware/` contains documentation for the built robot hardware, including electronics, wiring, power distribution, and physical construction.
 - `firmware/stm32/` contains the STM32G474RE PlatformIO firmware.
-- `raspberry-pi/` contains the Raspberry Pi web server, operator control panel, engineering tuner, serial-link backend, and systemd autostart service.
+- `raspberry-pi/` contains the Raspberry Pi web server, operator control panel, engineering tuner, serial-link backend, staged installer, NetworkManager hotspot tooling, and systemd service templates.
 
 ---
 
@@ -150,12 +156,18 @@ See the [STM32 firmware documentation](firmware/stm32/README.md) for upload, mon
 The Raspberry Pi software provides the robot web interfaces.
 
 ```bash
-python3 raspberry-pi/server.py --serial /dev/ttyAMA0 --port 8080
+python3 raspberry-pi/web/server.py --serial /dev/ttyAMA0 --port 8080
 ```
 
 The operator control panel is available at `/control`, and the engineering tuner is available at `/tuner`.
 
-See the [Raspberry Pi software documentation](raspberry-pi/README.md) for setup, web addresses, serial configuration, and autostart service installation.
+For a reproducible Raspberry Pi setup, use the staged installer:
+
+```bash
+bash raspberry-pi/install.sh all
+```
+
+See the [Raspberry Pi software documentation](raspberry-pi/README.md) for setup, web addresses, serial configuration, autostart services, Ethernet recovery, and hotspot fallback behavior.
 
 ---
 
