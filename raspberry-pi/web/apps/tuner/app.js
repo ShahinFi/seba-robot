@@ -102,6 +102,36 @@ let resetTimer = null;
 let csrfToken = "";
 let authenticated = false;
 
+function installZoomLock() {
+  let lastTouchEndMs = 0;
+  const blockGesture = (event) => {
+    event.preventDefault();
+  };
+
+  /*
+   * Mobile browser zoom gestures are disabled so tuning controls stay fixed
+   * while the robot is being operated.
+   */
+  document.addEventListener("gesturestart", blockGesture, {passive: false});
+  document.addEventListener("gesturechange", blockGesture, {passive: false});
+  document.addEventListener("gestureend", blockGesture, {passive: false});
+  document.addEventListener("dblclick", blockGesture, {passive: false});
+  document.addEventListener("touchmove", (event) => {
+    if (event.touches.length > 1) {
+      event.preventDefault();
+    }
+  }, {passive: false});
+  document.addEventListener("touchend", (event) => {
+    const nowMs = Date.now();
+
+    if (nowMs - lastTouchEndMs < 300) {
+      event.preventDefault();
+    }
+
+    lastTouchEndMs = nowMs;
+  }, {passive: false});
+}
+
 function writeLog(nodeId, text) {
   const node = document.getElementById(nodeId);
   const time = new Date().toLocaleTimeString();
@@ -637,6 +667,7 @@ async function pollTelemetry() {
 }
 
 async function initialize() {
+  installZoomLock();
   buildReadout();
   buildGainMatrix();
   bindJoystick();
