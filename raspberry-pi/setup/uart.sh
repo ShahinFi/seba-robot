@@ -43,6 +43,8 @@ sudo cat "$CMDLINE_FILE" |
     awk 'NF' |
     paste -sd ' ' - > "$tmp_cmdline"
 
+# The STM32 link uses the primary UART, so the Linux serial console must not
+# keep serial0 or ttyAMA0 open after boot.
 [ -s "$tmp_cmdline" ] ||
     fail "Refusing to write an empty kernel command line."
 

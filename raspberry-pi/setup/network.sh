@@ -58,6 +58,8 @@ handle_existing_netplan_file() {
 
     netplan_file_defines_seba_interface "$file" || return 0
 
+    # Cloud-init may own the first-boot Wi-Fi file. Replace only its network
+    # content after backing it up; other conflicting Netplan files stop setup.
     case "$(basename "$file")" in
         50-cloud-init.yaml)
             tmp_file="$(mktemp)"
@@ -154,6 +156,8 @@ configure_normal_wifi() {
         sudo nmcli connection modify "$NORMAL_WIFI_CONNECTION" \
             802-11-wireless.band "$NORMAL_WIFI_BAND"
     else
+        # Omitted pinning values mean automatic router selection for this
+        # managed normal Wi-Fi profile, even if it was pinned before.
         sudo nmcli connection modify "$NORMAL_WIFI_CONNECTION" \
             802-11-wireless.band ""
     fi
@@ -162,6 +166,8 @@ configure_normal_wifi() {
         sudo nmcli connection modify "$NORMAL_WIFI_CONNECTION" \
             802-11-wireless.bssid "$NORMAL_WIFI_BSSID"
     else
+        # Clearing the BSSID restores roaming within the same SSID instead of
+        # locking this profile to one access point.
         sudo nmcli connection modify "$NORMAL_WIFI_CONNECTION" \
             802-11-wireless.bssid ""
     fi

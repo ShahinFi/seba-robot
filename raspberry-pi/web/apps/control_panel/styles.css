@@ -523,6 +523,10 @@ label {
     );
   }
 
+  /*
+   * Phone landscape mode is treated as a controller layout: joystick on the
+   * left, motion limits in the middle, and run-control buttons on the right.
+   */
   body {
     overflow: hidden;
   }

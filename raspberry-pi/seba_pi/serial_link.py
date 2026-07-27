@@ -288,6 +288,8 @@ def parse_telemetry(line):
 
         key, value = item.split("=", 1)
         try:
+            # TEL values are flat key/value fields. Keep integers as integers
+            # so counters and fault codes do not appear as floating values.
             if value.lstrip("-").isdigit():
                 values[key] = int(value)
             else:

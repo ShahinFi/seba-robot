@@ -32,6 +32,8 @@ prepare_service() {
     esac
 
     render_template "$template" "$tmp_file"
+    # Verify rendered units before installing them so a bad path or missing
+    # environment replacement does not replace a working service.
     systemd-analyze verify "$tmp_file"
     prepared_services="${prepared_services}${service_name}|${tmp_file}
 "

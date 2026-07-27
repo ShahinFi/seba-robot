@@ -172,6 +172,10 @@ function buildGainMatrix() {
   matrix.textContent = "";
   matrix.appendChild(document.createElement("div"));
 
+  /*
+   * Matrix order matches the STM32 balance config command:
+   * left Z0...Z5, then right Z0...Z5.
+   */
   for (let col = 0; col < 6; col++) {
     const heading = document.createElement("div");
     heading.className = "head";
@@ -333,6 +337,11 @@ function applyJoystickVector(x, y) {
     Number(document.getElementById("drive_speed").value) || 0;
   const turnSpeed =
     Number(document.getElementById("turn_speed").value) || 0;
+
+  /*
+   * Screen coordinates have positive Y downward. The STM32 command convention
+   * uses positive drive velocity for forward motion and positive yaw to turn left.
+   */
   const v =
     formatCommandValue(-y * driveSpeed);
   const yaw =

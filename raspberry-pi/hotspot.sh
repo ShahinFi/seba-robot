@@ -186,6 +186,8 @@ active_connection_for_device() {
 normal_network_available() {
     NORMAL_NETWORK_REASON="no default route"
 
+    # A route through the SEBA hotspot is not normal network access. The
+    # fallback service must only stay idle when another reachable gateway exists.
     while read -r route; do
         gateway="$(printf '%s\n' "$route" | sed -n 's/.* via \([^ ]*\).*/\1/p')"
         device="$(printf '%s\n' "$route" | sed -n 's/.* dev \([^ ]*\).*/\1/p')"
@@ -247,6 +249,8 @@ monitor_hotspot() {
     log_message "Hotspot monitor started. wait=${FALLBACK_WAIT_SECONDS}s interval=${MONITOR_INTERVAL_SECONDS}s connection=$HOTSPOT_CONNECTION iface=$HOTSPOT_IFACE"
     sleep "$FALLBACK_WAIT_SECONDS"
 
+    # Fallback is intentionally one-way. After the hotspot starts, a user must
+    # return to normal Wi-Fi manually so active browser sessions are predictable.
     while true; do
         if hotspot_active; then
             log_message "Hotspot is active. Network monitor exiting."

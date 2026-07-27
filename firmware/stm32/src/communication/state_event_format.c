@@ -4,6 +4,10 @@
 
 #include <stddef.h>
 
+/*
+ * Event lines carry only the state fields needed to diagnose
+ * arming and fault transitions. Full telemetry stays in TEL lines.
+ */
 void StateEventFormat_WriteState(
     const RobotState *state
 )

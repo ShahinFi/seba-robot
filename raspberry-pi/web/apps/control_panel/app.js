@@ -165,6 +165,10 @@ function applyJoystickVector(x, y) {
   const turnSpeed =
     Number(document.getElementById("turn_speed").value) || 0;
 
+  /*
+   * Screen coordinates have positive Y downward. The STM32 command convention
+   * uses positive drive velocity for forward motion and positive yaw to turn left.
+   */
   joystickCommand = {
     v: formatCommandValue(-y * driveSpeed),
     yaw: formatCommandValue(-x * turnSpeed)

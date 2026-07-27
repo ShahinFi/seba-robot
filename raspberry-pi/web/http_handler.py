@@ -164,6 +164,8 @@ class RobotWebHandler(BaseHTTPRequestHandler):
         command = str(payload.get("command", "")).strip()
         self._cached_payload = payload
 
+        # Operator access is limited to normal run-control commands. Tuning,
+        # configuration, and arbitrary console commands require engineer login.
         operator_exact_commands = (
             "balance start",
             "balance stop",
@@ -202,6 +204,8 @@ class RobotWebHandler(BaseHTTPRequestHandler):
         root = (APPS_DIR / app_name).resolve()
         path = (root / filename).resolve()
 
+        # Resolve the requested path before checking ancestry so browser asset
+        # requests cannot escape the selected application directory.
         if (
             root not in path.parents and
             path != root

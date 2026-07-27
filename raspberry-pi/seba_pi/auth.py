@@ -24,6 +24,8 @@ def load_env_file(path):
     if not path or not os.path.isfile(path):
         return
 
+    # Systemd or command-line environment values take precedence over the
+    # local config file so service overrides stay explicit.
     with open(path, "r", encoding="utf-8") as handle:
         for raw_line in handle:
             line = raw_line.strip()
@@ -105,6 +107,8 @@ class AuthManager:
         if not self.configured:
             raise PermissionError("web authentication is not configured")
 
+        # Failed attempts are tracked before password verification so repeated
+        # unknown-role requests cannot bypass the local login throttle.
         with self._lock:
             self._check_login_limit(client_id)
 
@@ -205,6 +209,8 @@ class AuthManager:
         return f"{token}.{self._signature(token)}"
 
     def _signature(self, token):
+        # Session cookies carry an opaque token plus an HMAC. The actual
+        # session state stays in memory and is never stored in the browser.
         return hmac.new(
             self.secret.encode("utf-8"),
             token.encode("utf-8"),

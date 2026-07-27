@@ -56,6 +56,9 @@ if [ -f "$SEBA_INSTALL_STATE_FILE" ]; then
     . "$SEBA_INSTALL_STATE_FILE"
 fi
 
+# Explicit environment values override recorded install state. This lets an
+# installer stage update one setting without losing the previously resolved
+# repository path, service user, or network defaults.
 for name in \
     SEBA_SERVICE_USER \
     SEBA_SERIAL \
