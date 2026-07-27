@@ -255,7 +255,7 @@ bash raspberry-pi/install.sh network
 
 If `SEBA_HOTSPOT_SSID` is omitted, the hotspot name defaults to `SEBA-ROBOT`.
 
-If the NetworkManager connection name is different from the SSID, set `SEBA_WIFI_CONNECTION` to the saved profile name.
+If the NetworkManager connection name is different from the SSID, set `SEBA_WIFI_CONNECTION` to the saved profile name. The installer records this value so `hotspot.sh down` knows which normal Wi-Fi profile to activate when leaving hotspot mode.
 
 If normal Wi-Fi credentials are omitted, existing NetworkManager Wi-Fi profiles are preserved.
 
@@ -333,11 +333,11 @@ Return to normal Wi-Fi is manual:
 
 ```bash
 bash raspberry-pi/hotspot.sh down
-sudo nmcli connection up "<normal-wifi-profile>"
-sudo systemctl restart seba-hotspot-fallback.service
 ```
 
-The hotspot fallback service can become inactive after it successfully starts the hotspot. That is normal for the one-way fallback policy.
+`down` starts a detached transition on the Raspberry Pi, so it continues even if the SSH session was connected through the hotspot and drops during the switch. The transition stops the hotspot, activates the normal Wi-Fi profile named by `SEBA_WIFI_CONNECTION`, verifies that the normal gateway is reachable, and restores the hotspot if normal Wi-Fi cannot be established.
+
+The fallback monitor stays active after starting the hotspot. While `down` is switching back to normal Wi-Fi, the monitor pauses so it does not restart the hotspot during the disconnected interval.
 
 ---
 

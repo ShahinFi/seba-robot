@@ -147,6 +147,7 @@ check "session secret configured" grep -q '^SEBA_SESSION_SECRET=.' "$RASPBERRY_P
 check "web service enabled" systemctl is-enabled --quiet seba-web.service
 check "web service active" systemctl is-active --quiet seba-web.service
 check "fallback service enabled" systemctl is-enabled --quiet seba-hotspot-fallback.service
+check "fallback service active" systemctl is-active --quiet seba-hotspot-fallback.service
 check "control endpoint reachable locally" curl -fsS "http://127.0.0.1:${SEBA_WEB_PORT}/control"
 
 if [ -n "$failures" ]; then
