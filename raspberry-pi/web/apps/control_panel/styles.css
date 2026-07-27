@@ -59,6 +59,13 @@ h1 {
   min-width: 0;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 h2 {
   margin: 0 0 12px;
   font-size: 15px;
@@ -136,12 +143,19 @@ button.holding {
 }
 
 .auth-logout {
-  min-height: 24px;
-  padding: 2px 9px;
-  border-radius: 999px;
+  min-height: 36px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  background: #1a2027;
+  border-color: #394450;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
+}
+
+.auth-logout:hover {
+  color: var(--text);
+  border-color: #566575;
 }
 
 input {
@@ -439,6 +453,12 @@ label {
     width: 100%;
   }
 
+  .header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(96px, auto) minmax(0, 1fr);
+  }
+
   main {
     height: auto;
     grid-template-columns: 1fr;
@@ -532,6 +552,12 @@ label {
     flex-wrap: nowrap;
   }
 
+  .header-actions {
+    width: auto;
+    display: flex;
+    gap: 8px;
+  }
+
   .chip {
     min-height: 22px;
     padding: 2px 7px;
@@ -548,6 +574,12 @@ label {
     width: auto;
     min-width: 132px;
     min-height: 36px;
+    font-size: 12px;
+  }
+
+  .auth-logout {
+    min-height: 32px;
+    padding: 6px 9px;
     font-size: 12px;
   }
 
@@ -700,6 +732,12 @@ label {
   button.emergency {
     min-width: 118px;
     min-height: 36px;
+    font-size: 11px;
+  }
+
+  .auth-logout {
+    min-height: 30px;
+    padding: 5px 8px;
     font-size: 11px;
   }
 

@@ -56,6 +56,13 @@ h1 {
   min-width: 0;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 h2 {
   margin: 0 0 10px;
   color: #d8e0e8;
@@ -204,12 +211,19 @@ button.holding {
 }
 
 .auth-logout {
-  min-height: 24px;
-  padding: 2px 9px;
-  border-radius: 999px;
+  min-height: 36px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  background: #1a2027;
+  border-color: #394450;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
+}
+
+.auth-logout:hover {
+  color: var(--text);
+  border-color: #566575;
 }
 
 .toolbar {
@@ -568,6 +582,14 @@ button.holding {
     align-items: flex-start;
     flex-direction: column;
     gap: 8px;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .auth-logout {
+    width: 100%;
   }
 
   main {
