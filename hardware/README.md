@@ -10,7 +10,7 @@ The electronics are arranged across three physical layers. The motors are mounte
 
 ## 1. Hardware Overview
 
-The Raspberry Pi 5 is the robot’s high-level computer, running ROS 2 and other application software, coordinating autonomous behavior, processing navigation and sensor data, communicating with external services, and exchanging motion commands, measurements, status, and fault information with the STM32.
+The Raspberry Pi 5 is the robot's high-level computer. It runs the current operator-interface, tuning, telemetry, networking, and STM32-communication software, and is intended to support future ROS 2 integration, autonomous behavior, navigation and sensor processing, and communication with external services.
 
 The STM32 performs the real-time control. It controls both channels of the motor-driver shield and directly reads the IMU, motor encoders, motor-current measurements, and fault signals.
 
