@@ -43,10 +43,13 @@ The Raspberry Pi platform has five main parts:
 ```text
 raspberry-pi/
 |-- seba_pi/
+|   |-- auth.py
+|   |-- auth_hash.py
 |   |-- __init__.py
 |   `-- serial_link.py
 |-- setup/
 |   |-- README.md
+|   |-- auth.sh
 |   |-- common.sh
 |   |-- network.sh
 |   |-- packages.sh
@@ -67,14 +70,15 @@ raspberry-pi/
 |   `-- server.py
 |-- hotspot.sh
 |-- install.sh
+|-- local_config.example.env
 |-- requirements.txt
 `-- README.md
 ```
 
 | Path | Purpose |
 |---|---|
-| `web/` | Python web server, control panel, tuner, JSON API, and web-runtime documentation |
-| `seba_pi/` | UART connection, telemetry state, command queue, ACK handling, retries, and STM32 event logs |
+| `web/` | Python web server, login-gated control panel, tuner, JSON API, and web-runtime documentation |
+| `seba_pi/` | local web authentication, UART connection, telemetry state, command queue, ACK handling, retries, and STM32 event logs |
 | `install.sh` | public staged installer for Raspberry Pi setup |
 | `setup/` | setup-stage scripts and setup documentation |
 | `systemd/` | service templates installed by the setup tooling |
@@ -130,7 +134,7 @@ Fresh Ubuntu setup, installer stages, packages, UART, NetworkManager, Netplan, E
 
 [**Raspberry Pi Web Runtime**](web/README.md)
 
-Python web server, manual runtime command, operator control panel, engineering tuner, JSON API, STM32 command path, telemetry, and event logs.
+Python web server, local login, operator control panel, engineering tuner, JSON API, STM32 command path, telemetry, and event logs.
 
 ### Related Project Documentation
 

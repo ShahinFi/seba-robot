@@ -14,6 +14,7 @@
         <div class="subline">
           <span id="connection" class="chip muted">connecting</span>
           <span id="mode" class="chip muted">stopped</span>
+          <button id="logout" class="auth-logout hidden">Logout</button>
         </div>
       </div>
     </div>
@@ -129,6 +130,18 @@
       </section>
     </div>
   </main>
+
+  <div id="auth_overlay" class="auth-overlay hidden">
+    <form id="auth_form" class="auth-card">
+      <h2>Unlock Tuner</h2>
+      <p id="auth_message">Engineer access is required.</p>
+      <input id="auth_role" type="hidden" value="engineer">
+      <label>Password
+        <input id="auth_password" type="password" autocomplete="current-password">
+      </label>
+      <button class="primary" type="submit">Unlock</button>
+    </form>
+  </div>
 
   <script src="/apps/tuner/app.js" defer></script>
 </body>

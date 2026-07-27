@@ -4,3 +4,5 @@ control/simulink/slprj
 __pycache__/
 *.py[cod]
 raspberry-pi/.install-state
+raspberry-pi/local_config.env
+raspberry-pi/local_config.env.seba-backup-*

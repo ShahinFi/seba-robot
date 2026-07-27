@@ -12,12 +12,14 @@ RASPBERRY_PI_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RASPBERRY_PI_DIR))
 
 from http_handler import RobotWebHandler
+from seba_pi.auth import AuthManager, load_env_file
 from seba_pi.serial_link import SerialLink
 
 
 DEFAULT_BAUD = 115200
 DEFAULT_SERIAL_PORT = "/dev/ttyAMA0"
 DEFAULT_HTTP_PORT = 8080
+DEFAULT_CONFIG_FILE = RASPBERRY_PI_DIR / "local_config.env"
 
 
 def main():
@@ -42,8 +44,14 @@ def main():
         type=int,
         default=int(os.environ.get("SEBA_WEB_PORT", DEFAULT_HTTP_PORT))
     )
+    parser.add_argument(
+        "--config",
+        default=os.environ.get("SEBA_LOCAL_CONFIG", str(DEFAULT_CONFIG_FILE))
+    )
     args = parser.parse_args()
 
+    load_env_file(args.config)
+    RobotWebHandler.auth = AuthManager()
     RobotWebHandler.link = SerialLink(args.serial, args.baud)
     server = ThreadingHTTPServer((args.host, args.port), RobotWebHandler)
 

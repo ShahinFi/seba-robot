@@ -6,6 +6,8 @@ from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlparse
 
+from seba_pi.auth import build_clear_cookie, build_session_cookie
+
 
 ROOT_DIR = Path(__file__).resolve().parent
 APPS_DIR = ROOT_DIR / "apps"
@@ -15,6 +17,7 @@ class RobotWebHandler(BaseHTTPRequestHandler):
     """Serve robot web apps and JSON endpoints backed by one serial link."""
 
     link = None
+    auth = None
 
     def do_GET(self):
         path = urlparse(self.path).path
@@ -37,16 +40,76 @@ class RobotWebHandler(BaseHTTPRequestHandler):
             self._handle_telemetry()
             return
 
+        if path == "/api/auth":
+            self._handle_auth_status()
+            return
+
         self.send_error(404)
 
     def do_POST(self):
         path = urlparse(self.path).path
 
-        if path != "/api/command":
-            self.send_error(404)
+        if path == "/api/login":
+            self._handle_login()
             return
 
+        if path == "/api/logout":
+            self._handle_logout()
+            return
+
+        if path == "/api/command":
+            self._handle_command()
+            return
+
+        self.send_error(404)
+
+    def log_message(self, format, *args):
+        return
+
+    def _handle_auth_status(self):
+        self._send_json({
+            "ok": True,
+            "auth": self.auth.status_for_headers(self.headers),
+        })
+
+    def _handle_login(self):
         try:
+            payload = self._read_json()
+            role = str(payload.get("role", "operator")).strip()
+            password = str(payload.get("password", ""))
+            token, session = self.auth.login(
+                role,
+                password,
+                self.client_address[0],
+            )
+            self._send_json(
+                {
+                    "ok": True,
+                    "role": session["role"],
+                    "csrf": session["csrf"],
+                },
+                headers={"Set-Cookie": build_session_cookie(token)},
+            )
+        except PermissionError as exc:
+            self._send_json({"ok": False, "error": str(exc)}, status=403)
+        except Exception as exc:
+            self._send_json({"ok": False, "error": str(exc)}, status=500)
+
+    def _handle_logout(self):
+        self.auth.logout(self.headers)
+        self._send_json(
+            {"ok": True},
+            headers={"Set-Cookie": build_clear_cookie()},
+        )
+
+    def _handle_command(self):
+        try:
+            session = self.auth.require_role(
+                self.headers,
+                self._required_role_for_command_payload(),
+            )
+            self.auth.require_csrf(self.headers, session)
+
             payload = self._read_json()
             command = str(payload["command"]).strip()
             log_command = bool(payload.get("log", True))
@@ -58,17 +121,20 @@ class RobotWebHandler(BaseHTTPRequestHandler):
                 "ok": not response.startswith("ERROR:"),
                 "response": response,
             })
+        except PermissionError as exc:
+            self._send_json(
+                {"ok": False, "error": str(exc)},
+                status=403
+            )
         except Exception as exc:
             self._send_json(
                 {"ok": False, "error": str(exc)},
                 status=500
             )
 
-    def log_message(self, format, *args):
-        return
-
     def _handle_telemetry(self):
         try:
+            self.auth.require_role(self.headers, "operator")
             telemetry, line, error = self.link.snapshot()
             if telemetry is None:
                 raise RuntimeError(error or "telemetry unavailable")
@@ -82,13 +148,46 @@ class RobotWebHandler(BaseHTTPRequestHandler):
                 "command": self.link.command_status(),
                 "logs": self.link.read_logs(),
             })
+        except PermissionError as exc:
+            self._send_json(
+                {"ok": False, "error": str(exc)},
+                status=403
+            )
         except Exception as exc:
             self._send_json(
                 {"ok": False, "error": str(exc)},
                 status=500
             )
 
+    def _required_role_for_command_payload(self):
+        payload = self._read_json()
+        command = str(payload.get("command", "")).strip()
+        self._cached_payload = payload
+
+        operator_exact_commands = (
+            "balance start",
+            "balance stop",
+            "actuator stop",
+            "system reset",
+        )
+        operator_prefix_commands = (
+            "balance command ",
+        )
+
+        if (
+            command in operator_exact_commands or
+            any(command.startswith(prefix) for prefix in operator_prefix_commands)
+        ):
+            return "operator"
+
+        return "engineer"
+
     def _read_json(self):
+        if hasattr(self, "_cached_payload"):
+            payload = self._cached_payload
+            del self._cached_payload
+            return payload
+
         length = int(self.headers.get("Content-Length", "0"))
         raw = self.rfile.read(length)
         return json.loads(raw.decode("utf-8"))
@@ -125,12 +224,15 @@ class RobotWebHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _send_json(self, payload, status=200):
+    def _send_json(self, payload, status=200, headers=None):
         """Send a JSON response with the given HTTP status."""
 
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        if headers:
+            for name, value in headers.items():
+                self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)

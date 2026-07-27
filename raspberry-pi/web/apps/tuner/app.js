@@ -99,6 +99,8 @@ const resetHoldMs = 1500;
 let joystickCommand = {v: 0, yaw: 0};
 let joystickHoldTimer = null;
 let resetTimer = null;
+let csrfToken = "";
+let authenticated = false;
 
 function writeLog(nodeId, text) {
   const node = document.getElementById(nodeId);
@@ -195,12 +197,96 @@ function buildGainMatrix() {
 }
 
 async function api(path, options) {
-  const response = await fetch(path, options);
+  const requestOptions = options || {};
+  requestOptions.headers = requestOptions.headers || {};
+  if (csrfToken && requestOptions.method === "POST") {
+    requestOptions.headers["X-SEBA-CSRF"] = csrfToken;
+  }
+
+  const response = await fetch(path, requestOptions);
   const data = await response.json();
   if (!response.ok || data.ok === false) {
     throw new Error(data.error || "request failed");
   }
   return data;
+}
+
+function showAuth(message) {
+  const overlay = document.getElementById("auth_overlay");
+  const messageNode = document.getElementById("auth_message");
+
+  authenticated = false;
+  csrfToken = "";
+  messageNode.textContent = message;
+  overlay.classList.remove("hidden");
+  document.getElementById("logout").classList.add("hidden");
+  stopJoystickHold();
+  centerJoystick(false);
+}
+
+function hideAuth(role) {
+  authenticated = true;
+  document.getElementById("auth_overlay").classList.add("hidden");
+  document.getElementById("logout").classList.remove("hidden");
+  logStm(`web session unlocked as ${role}`);
+}
+
+async function refreshAuth() {
+  const data = await api("/api/auth");
+  const auth = data.auth;
+
+  if (!auth.configured) {
+    showAuth("Web authentication is not configured. Run: bash raspberry-pi/install.sh auth");
+    return false;
+  }
+
+  if (!auth.authenticated) {
+    showAuth("Engineer access is required.");
+    return false;
+  }
+
+  if (auth.role !== "engineer") {
+    showAuth("Engineer access is required.");
+    return false;
+  }
+
+  csrfToken = auth.csrf;
+  hideAuth(auth.role);
+  return true;
+}
+
+async function login(event) {
+  event.preventDefault();
+
+  try {
+    const data = await api("/api/login", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        role: document.getElementById("auth_role").value,
+        password: document.getElementById("auth_password").value
+      })
+    });
+    csrfToken = data.csrf;
+    document.getElementById("auth_password").value = "";
+    hideAuth(data.role);
+    pollTelemetry();
+  } catch (error) {
+    showAuth(error.message);
+  }
+}
+
+async function logout() {
+  stopJoystickHold();
+  centerJoystick(false);
+  await sendCommand("balance command 0 0", {log: false}).catch(() => {});
+
+  try {
+    await api("/api/logout", {method: "POST"});
+  } catch (_) {
+  }
+
+  showAuth("Session closed.");
 }
 
 async function sendCommand(command, options = {}) {
@@ -473,6 +559,10 @@ let telemetryPollActive = false;
 let lastAck = "";
 
 async function pollTelemetry() {
+  if (!authenticated) {
+    return;
+  }
+
   if (telemetryPollActive) {
     return;
   }
@@ -525,15 +615,36 @@ async function pollTelemetry() {
     }
   } catch (error) {
     setChip("connection", error.message, "bad");
+    if (
+      error.message === "login required" ||
+      error.message === "engineer access required" ||
+      error.message === "invalid csrf token"
+    ) {
+      showAuth(error.message);
+    }
   } finally {
     telemetryPollActive = false;
   }
 }
 
-buildReadout();
-buildGainMatrix();
-bindJoystick();
-bindControls();
-centerJoystick(false);
-pollTelemetry();
-setInterval(pollTelemetry, 300);
+async function initialize() {
+  buildReadout();
+  buildGainMatrix();
+  bindJoystick();
+  bindControls();
+  centerJoystick(false);
+  document.getElementById("auth_form").addEventListener("submit", login);
+  document.getElementById("logout").addEventListener("click", logout);
+
+  try {
+    if (await refreshAuth()) {
+      pollTelemetry();
+    }
+  } catch (error) {
+    showAuth(error.message);
+  }
+
+  setInterval(pollTelemetry, 300);
+}
+
+initialize();

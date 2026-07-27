@@ -2,7 +2,7 @@
 
 SEBA-ROBOT is a two-wheeled self-balancing robot project for control, embedded systems, and autonomous robotics development.
 
-The current work covers the robot dynamics, balance and motion control, nonlinear simulation, built physical hardware, STM32 real-time firmware, and Raspberry Pi web control software.
+The current work covers the robot dynamics, balance and motion control, nonlinear simulation, built physical hardware, STM32 real-time firmware, and Raspberry Pi web runtime.
 
 The physical robot has been implemented and validated with stable self-balancing, forward-velocity tracking, yaw-rate control, and closed-loop motor-current regulation.
 
@@ -17,7 +17,7 @@ The implemented work covers six main areas:
 - **Simulation and evaluation:** a nonlinear Simulink and Simscape Multibody model with four documented test cases, result plots, and animations
 - **Hardware system:** built physical robot hardware, including power distribution, STM32 connections, motor driver, sensors, wiring, and mechanical electronics layout
 - **STM32 firmware:** real-time PlatformIO firmware for state estimation, balance and motion control, actuator current control, telemetry, safety handling, motor control, encoder reading, IMU acquisition, and current sensing
-- **Raspberry Pi platform:** Python web server with an operator control panel, engineering tuner, STM32 UART communication, telemetry display, command handling, staged Ubuntu setup, autostart service, and hotspot fallback support
+- **Raspberry Pi platform:** Python web server with local login, an operator control panel, engineering tuner, STM32 UART communication, telemetry display, command handling, staged Ubuntu setup, autostart service, and hotspot fallback support
 
 ---
 
@@ -51,7 +51,7 @@ Real-time PlatformIO firmware for STM32G474RE sensing, state estimation, balance
 
 [**Raspberry Pi Platform**](raspberry-pi/README.md)
 
-Raspberry Pi setup and web runtime for the operator control panel, engineering tuner, STM32 UART communication, telemetry, staged Ubuntu setup, autostart service, and hotspot fallback support.
+Raspberry Pi setup and web runtime for local login, the operator control panel, engineering tuner, STM32 UART communication, telemetry, staged Ubuntu setup, autostart service, and hotspot fallback support.
 
 ---
 
@@ -113,7 +113,7 @@ seba-robot/
 - `control/simulink/` contains the simulation model, simulation documentation, and test results.
 - `hardware/` contains documentation for the built robot hardware, including electronics, wiring, power distribution, and physical construction.
 - `firmware/stm32/` contains the STM32G474RE PlatformIO firmware.
-- `raspberry-pi/` contains the Raspberry Pi setup tooling, web server, operator control panel, engineering tuner, serial-link backend, NetworkManager hotspot tooling, and systemd service templates.
+- `raspberry-pi/` contains the Raspberry Pi setup tooling, web server, local web authentication, operator control panel, engineering tuner, serial-link backend, NetworkManager hotspot tooling, and systemd service templates.
 
 ---
 

@@ -20,6 +20,8 @@ prepare_service() {
         seba-web.service)
             [ -x "$REPO_DIR/.venv/bin/python3" ] ||
                 fail "Python virtual environment missing. Run the packages stage first."
+            [ -f "$RASPBERRY_PI_DIR/local_config.env" ] ||
+                fail "Web auth config missing. Run the auth stage first."
             id "$SEBA_INSTALL_USER" >/dev/null 2>&1 ||
                 fail "Service user does not exist: $SEBA_INSTALL_USER"
             PYTHON="$REPO_DIR/.venv/bin/python3"

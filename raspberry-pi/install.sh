@@ -7,12 +7,13 @@ SETUP_DIR="$SCRIPT_DIR/setup"
 
 usage() {
     cat <<EOF
-Usage: bash raspberry-pi/install.sh <all|preflight|packages|uart|network|services|verify>
+Usage: bash raspberry-pi/install.sh <all|preflight|packages|auth|uart|network|services|verify>
 
 Stages:
-  all       Run preflight, packages, uart, network, and services.
+  all       Run preflight, packages, auth, uart, network, and services.
   preflight Check the supported Raspberry Pi platform before changes.
   packages  Install operating-system packages and Python dependencies.
+  auth      Create local web UI credentials.
   uart      Configure the Raspberry Pi UART for the STM32 link.
   network   Configure NetworkManager, Ethernet recovery, Wi-Fi country, and hotspot.
   services  Install and start SEBA systemd services.
@@ -20,6 +21,7 @@ Stages:
 
 Non-interactive setup:
   Set SEBA_NONINTERACTIVE=1 and provide required values with environment variables.
+  For auth, SEBA_OPERATOR_PASSWORD is required.
 EOF
 }
 
@@ -31,6 +33,9 @@ run_stage() {
             ;;
         packages)
             bash "$SETUP_DIR/packages.sh"
+            ;;
+        auth)
+            bash "$SETUP_DIR/auth.sh"
             ;;
         uart)
             bash "$SETUP_DIR/uart.sh"
@@ -55,6 +60,7 @@ case "${1:-}" in
     all)
         run_stage preflight
         run_stage packages
+        run_stage auth
         run_stage uart
         run_stage network
         run_stage services
@@ -69,7 +75,7 @@ membership. Reboot the Raspberry Pi, reconnect, then run:
 
 EOF
         ;;
-    packages|uart|network|services)
+    packages|auth|uart|network|services)
         run_stage preflight
         run_stage "$1"
         ;;
