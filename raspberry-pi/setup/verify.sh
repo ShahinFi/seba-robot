@@ -85,6 +85,16 @@ if [ -n "$SEBA_WIFI_CONNECTION" ]; then
         nmcli -g connection.autoconnect connection show "$SEBA_WIFI_CONNECTION"
     check_output "normal Wi-Fi powersave disabled" '^2' \
         nmcli -g 802-11-wireless.powersave connection show "$SEBA_WIFI_CONNECTION"
+
+    if [ -n "$SEBA_WIFI_BAND" ]; then
+        check_exact_output "normal Wi-Fi band" "$SEBA_WIFI_BAND" \
+            nmcli -g 802-11-wireless.band connection show "$SEBA_WIFI_CONNECTION"
+    fi
+
+    if [ -n "$SEBA_WIFI_BSSID" ]; then
+        check_exact_output "normal Wi-Fi BSSID" "$SEBA_WIFI_BSSID" \
+            nmcli -g 802-11-wireless.bssid connection show "$SEBA_WIFI_CONNECTION"
+    fi
 fi
 
 check "hotspot profile exists" nmcli connection show "$SEBA_HOTSPOT_CONNECTION"
@@ -129,6 +139,11 @@ check "install user in dialout" sh -c \
     "id -nG '$SEBA_INSTALL_USER' | tr ' ' '\n' | grep -Fxq dialout"
 check "Python virtual environment valid" test -x "$REPO_DIR/.venv/bin/python3"
 check "pyserial import" "$REPO_DIR/.venv/bin/python3" -c 'import serial'
+check "web auth config exists" test -f "$RASPBERRY_PI_DIR/local_config.env"
+check_output "web auth config mode" '^600$' stat -c '%a' "$RASPBERRY_PI_DIR/local_config.env"
+check "operator password hash configured" grep -q '^SEBA_OPERATOR_PASSWORD_HASH=pbkdf2_sha256\$' "$RASPBERRY_PI_DIR/local_config.env"
+check "engineer password hash configured" grep -q '^SEBA_ENGINEER_PASSWORD_HASH=pbkdf2_sha256\$' "$RASPBERRY_PI_DIR/local_config.env"
+check "session secret configured" grep -q '^SEBA_SESSION_SECRET=.' "$RASPBERRY_PI_DIR/local_config.env"
 check "web service enabled" systemctl is-enabled --quiet seba-web.service
 check "web service active" systemctl is-active --quiet seba-web.service
 check "fallback service enabled" systemctl is-enabled --quiet seba-hotspot-fallback.service

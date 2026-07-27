@@ -2,7 +2,7 @@
 
 This document describes how to prepare a Raspberry Pi 5 for SEBA-ROBOT from a supported Ubuntu Server installation.
 
-The setup tooling configures the operating-system packages, Python environment, STM32 UART link, network ownership, Ethernet recovery address, hotspot fallback, systemd services, and final verification checks. The web server and browser interfaces are documented separately in [Raspberry Pi Web Runtime](../web/README.md).
+The setup tooling configures the operating-system packages, Python environment, local web credentials, STM32 UART link, network ownership, Ethernet recovery address, hotspot fallback, systemd services, and final verification checks. The web server and browser interfaces are documented separately in [Raspberry Pi Web Runtime](../web/README.md).
 
 ---
 
@@ -34,7 +34,7 @@ Run the staged installer from the repository root:
 bash raspberry-pi/install.sh all
 ```
 
-The `all` command installs the required packages, UART setup, network configuration, and systemd services. A reboot is required after it finishes so UART boot changes and group membership take effect. After reboot, run:
+The `all` command installs the required packages, local web credentials, UART setup, network configuration, and systemd services. A reboot is required after it finishes so UART boot changes and group membership take effect. After reboot, run:
 
 ```bash
 bash raspberry-pi/install.sh verify
@@ -45,6 +45,7 @@ The same installer can run individual stages:
 ```bash
 bash raspberry-pi/install.sh preflight
 bash raspberry-pi/install.sh packages
+bash raspberry-pi/install.sh auth
 bash raspberry-pi/install.sh uart
 bash raspberry-pi/install.sh network
 bash raspberry-pi/install.sh services
@@ -55,16 +56,19 @@ The `all` command stops at the first failed stage. Each stage is intended to be 
 
 The installer runs preflight automatically before every modifying stage.
 
-Interactive prompts are the default for values that are specific to the local robot or network. Non-interactive setup can be done with environment variables:
+The hotspot password is requested through a hidden interactive prompt unless it is supplied through `SEBA_HOTSPOT_PASSWORD`. Normal Wi-Fi credentials and non-default network values are supplied through environment variables. Existing normal Wi-Fi profiles are preserved when normal Wi-Fi credentials are omitted.
+
+Non-interactive setup can be done with environment variables:
 
 ```bash
 SEBA_NONINTERACTIVE=1 \
+SEBA_OPERATOR_PASSWORD='change-this-password' \
 SEBA_HOTSPOT_PASSWORD='change-this-password' \
 SEBA_WIFI_COUNTRY=FI \
 bash raspberry-pi/install.sh all
 ```
 
-In non-interactive mode, `SEBA_HOTSPOT_PASSWORD` is required. `SEBA_WIFI_COUNTRY` must match the country where the robot operates.
+In non-interactive mode, `SEBA_OPERATOR_PASSWORD` and `SEBA_HOTSPOT_PASSWORD` are required. `SEBA_ENGINEER_PASSWORD` is optional; when it is omitted, the engineer login uses the operator password. `SEBA_WIFI_COUNTRY` must match the country where the robot operates.
 
 The installer records the resolved repository path and Linux user in:
 
@@ -96,7 +100,35 @@ It also creates `.venv` in the repository root and installs:
 pyserial>=3.5
 ```
 
-### 3.2 UART
+### 3.2 Web Authentication
+
+The auth stage creates the local web credentials used by `/control`, `/tuner`, and the JSON API:
+
+```bash
+bash raspberry-pi/install.sh auth
+```
+
+The credentials are written to:
+
+```text
+raspberry-pi/local_config.env
+```
+
+That file is local to the Raspberry Pi and is ignored by git. It stores PBKDF2 password hashes and a random session secret:
+
+```text
+SEBA_OPERATOR_PASSWORD_HASH=...
+SEBA_ENGINEER_PASSWORD_HASH=...
+SEBA_SESSION_SECRET=...
+```
+
+Operator access can use the control panel. Engineer access can use both the control panel and tuner. The tuner requires engineer access because it can change actuator and balance-controller settings.
+
+Run the auth stage again to replace the web passwords.
+
+The service stage requires this file before installing `seba-web.service`.
+
+### 3.3 UART
 
 The UART stage configures the Raspberry Pi hardware UART used for the STM32 link.
 
@@ -132,7 +164,7 @@ The default baud rate is:
 115200
 ```
 
-### 3.3 Network
+### 3.4 Network
 
 The network stage configures the Raspberry Pi so a browser device can reach the Pi web server through normal Wi-Fi, Ethernet recovery, or the SEBA hotspot.
 
@@ -199,6 +231,29 @@ SEBA_WIFI_SSID='router-name' \
 SEBA_WIFI_PASSWORD='router-password' \
 bash raspberry-pi/install.sh network
 ```
+
+For dual-band routers that use one shared SSID, reliable robot operation can depend on which access point the Raspberry Pi joins. If the router's 5 GHz network is unreliable or not visible while the router channel is automatic, set the router to a fixed non-DFS 5 GHz channel such as channel `36`. The normal Wi-Fi profile can then be pinned to that access point:
+
+```bash
+SEBA_WIFI_SSID='router-name' \
+SEBA_WIFI_PASSWORD='router-password' \
+SEBA_WIFI_CONNECTION='seba-router' \
+SEBA_WIFI_BAND=a \
+SEBA_WIFI_BSSID='00:11:22:33:44:55' \
+bash raspberry-pi/install.sh network
+```
+
+`SEBA_WIFI_BAND` and `SEBA_WIFI_BSSID` are optional. Leave them unset for automatic band selection and normal roaming. When the normal Wi-Fi profile is updated, omitted band and BSSID values clear any previous pinning on that managed profile. BSSID pinning is specific to one router access point and should be used only when that fixed access point is intentional.
+
+To choose the robot hotspot name and password:
+
+```bash
+SEBA_HOTSPOT_SSID='My-Robot' \
+SEBA_HOTSPOT_PASSWORD='chosen-hotspot-password' \
+bash raspberry-pi/install.sh network
+```
+
+If `SEBA_HOTSPOT_SSID` is omitted, the hotspot name defaults to `SEBA-ROBOT`.
 
 If the NetworkManager connection name is different from the SSID, set `SEBA_WIFI_CONNECTION` to the saved profile name.
 
@@ -398,6 +453,14 @@ Check that the web server responds locally on the Pi:
 ```bash
 curl -I http://127.0.0.1:8080/control
 ```
+
+Check that local web credentials exist and are not world-readable:
+
+```bash
+ls -l raspberry-pi/local_config.env
+```
+
+The file mode should be `600`.
 
 Check hotspot state and fallback service state:
 

@@ -8,7 +8,17 @@ SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 NORMAL_WIFI_SSID="${SEBA_WIFI_SSID:-}"
 NORMAL_WIFI_PASSWORD="${SEBA_WIFI_PASSWORD:-}"
 NORMAL_WIFI_CONNECTION="${SEBA_WIFI_CONNECTION:-$NORMAL_WIFI_SSID}"
+NORMAL_WIFI_BAND=""
+NORMAL_WIFI_BSSID=""
 CLOUD_INIT_DISABLE_FILE="/etc/cloud/cloud.cfg.d/99-disable-network-config.cfg"
+
+if [ -n "${SEBA_WIFI_BAND_PROVIDED:-}" ]; then
+    NORMAL_WIFI_BAND="$SEBA_WIFI_BAND"
+fi
+
+if [ -n "${SEBA_WIFI_BSSID_PROVIDED:-}" ]; then
+    NORMAL_WIFI_BSSID="$SEBA_WIFI_BSSID"
+fi
 
 require_root_tooling
 require_command nmcli
@@ -123,20 +133,42 @@ configure_normal_wifi() {
             NORMAL_WIFI_PASSWORD="$(prompt_secret SEBA_WIFI_PASSWORD "Normal Wi-Fi password for $NORMAL_WIFI_SSID")"
         fi
 
-        sudo nmcli device wifi connect "$NORMAL_WIFI_SSID" \
-            password "$NORMAL_WIFI_PASSWORD" \
-            ifname "$SEBA_HOTSPOT_IFACE"
+        sudo nmcli connection add \
+            type wifi \
+            ifname "$SEBA_HOTSPOT_IFACE" \
+            con-name "$NORMAL_WIFI_CONNECTION" \
+            autoconnect yes \
+            ssid "$NORMAL_WIFI_SSID" >/dev/null
 
-        NORMAL_WIFI_CONNECTION="$NORMAL_WIFI_SSID"
         sudo nmcli connection modify "$NORMAL_WIFI_CONNECTION" \
             connection.interface-name "$SEBA_HOTSPOT_IFACE" \
             connection.autoconnect yes \
             802-11-wireless.mode infrastructure \
             802-11-wireless.ssid "$NORMAL_WIFI_SSID" \
-            802-11-wireless.powersave 2
+            802-11-wireless.powersave 2 \
+            802-11-wireless-security.key-mgmt wpa-psk \
+            802-11-wireless-security.psk "$NORMAL_WIFI_PASSWORD"
+    fi
+
+    if [ -n "$NORMAL_WIFI_BAND" ]; then
+        sudo nmcli connection modify "$NORMAL_WIFI_CONNECTION" \
+            802-11-wireless.band "$NORMAL_WIFI_BAND"
+    else
+        sudo nmcli connection modify "$NORMAL_WIFI_CONNECTION" \
+            802-11-wireless.band ""
+    fi
+
+    if [ -n "$NORMAL_WIFI_BSSID" ]; then
+        sudo nmcli connection modify "$NORMAL_WIFI_CONNECTION" \
+            802-11-wireless.bssid "$NORMAL_WIFI_BSSID"
+    else
+        sudo nmcli connection modify "$NORMAL_WIFI_CONNECTION" \
+            802-11-wireless.bssid ""
     fi
 
     SEBA_WIFI_CONNECTION="$NORMAL_WIFI_CONNECTION"
+    SEBA_WIFI_BAND="$NORMAL_WIFI_BAND"
+    SEBA_WIFI_BSSID="$NORMAL_WIFI_BSSID"
 }
 
 country="$(prompt_value SEBA_WIFI_COUNTRY "Wi-Fi regulatory country" "$SEBA_WIFI_COUNTRY")"
