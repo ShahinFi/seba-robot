@@ -11,7 +11,7 @@ The Raspberry Pi hosts the operator control panel and engineering tuner, communi
 The Raspberry Pi platform has five main parts:
 
 - one shared Python HTTP server
-- one reusable STM32 serial-link module
+- one reusable backend module for local authentication and STM32 serial communication
 - two browser applications
 - a staged Raspberry Pi installer
 - NetworkManager-based hotspot and fallback tooling
