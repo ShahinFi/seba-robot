@@ -103,6 +103,27 @@ The installed systemd service runs the same server with the configured repositor
 
 The server provides two browser interfaces.
 
+<table>
+  <tr>
+    <td>
+      <img src="../../robot/screenshots/control-panel.jpg" alt="SEBA-ROBOT operator control panel" width="100%" /><br/>
+      Figure 1. Desktop operator control panel for balance control, joystick commands, telemetry, and STM32 events.
+    </td>
+  </tr>
+  <tr>
+    <td style="padding-top:6px;">
+      <img src="../../robot/screenshots/control-panel-mobile-landscape.jpeg" alt="SEBA-ROBOT mobile landscape control panel" width="100%" /><br/>
+      Figure 2. Mobile landscape operator control panel with controller-style joystick and run controls.
+    </td>
+  </tr>
+  <tr>
+    <td style="padding-top:6px;">
+      <img src="../../robot/screenshots/tuner.jpg" alt="SEBA-ROBOT engineering tuner" width="100%" /><br/>
+      Figure 3. Engineering tuner for actuator settings, balance gains, live telemetry, and STM32 logs.
+    </td>
+  </tr>
+</table>
+
 ### 4.1 Control Panel
 
 The control panel is the operator interface:

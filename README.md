@@ -8,6 +8,81 @@ The physical robot has been implemented and validated with stable self-balancing
 
 ---
 
+## Demo
+
+<table width="100%">
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://youtu.be/SNxGYvboVcs">
+        <img src="robot/thumbnails/stability-demo.jpeg" alt="Watch SEBA-ROBOT stability and disturbance recovery demo" width="100%" />
+      </a><br/>
+      <strong>Stability and disturbance recovery.</strong><br/>
+      Shows stable self-balancing and recovery when the physical robot is pushed forward and backward.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://youtu.be/KeqCIQtGD3I">
+        <img src="robot/thumbnails/command-tracking-demo.jpeg" alt="Watch SEBA-ROBOT command tracking demo" width="100%" />
+      </a><br/>
+      <strong>Command tracking.</strong><br/>
+      Shows forward, backward, yaw-rate, and combined motion command tracking using the web joystick interface.
+    </td>
+  </tr>
+</table>
+
+---
+
+## Gallery
+
+### Robot
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="robot/photos/front.jpeg" alt="SEBA-ROBOT front view" width="100%" /><br/>
+      Figure 1. Front view of SEBA-ROBOT.
+    </td>
+    <td width="50%">
+      <img src="robot/photos/back.jpeg" alt="SEBA-ROBOT back view" width="100%" /><br/>
+      Figure 2. Back view of SEBA-ROBOT.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="robot/photos/left.jpeg" alt="SEBA-ROBOT left side view" width="100%" /><br/>
+      Figure 3. Left side view of SEBA-ROBOT.
+    </td>
+    <td width="50%">
+      <img src="robot/photos/right.jpeg" alt="SEBA-ROBOT right side view" width="100%" /><br/>
+      Figure 4. Right side view of SEBA-ROBOT.
+    </td>
+  </tr>
+</table>
+
+### Web Interfaces
+
+<table>
+  <tr>
+    <td>
+      <img src="robot/screenshots/control-panel.jpg" alt="SEBA-ROBOT operator control panel" width="100%" /><br/>
+      Figure 5. Desktop operator control panel for balance control, joystick commands, telemetry, and STM32 events.
+    </td>
+  </tr>
+  <tr>
+    <td style="padding-top:6px;">
+      <img src="robot/screenshots/control-panel-mobile-landscape.jpeg" alt="SEBA-ROBOT mobile landscape control panel" width="100%" /><br/>
+      Figure 6. Mobile landscape operator control panel with controller-style joystick and run controls.
+    </td>
+  </tr>
+  <tr>
+    <td style="padding-top:6px;">
+      <img src="robot/screenshots/tuner.jpg" alt="SEBA-ROBOT engineering tuner" width="100%" /><br/>
+      Figure 7. Engineering tuner for actuator settings, balance gains, live telemetry, and STM32 logs.
+    </td>
+  </tr>
+</table>
+
+---
+
 ## Current Implementation
 
 The implemented work covers six main areas:
@@ -105,6 +180,10 @@ seba-robot/
 |   |   `-- server.py
 |   |-- hotspot.sh
 |   `-- install.sh
+|-- robot/
+|   |-- photos/
+|   |-- screenshots/
+|   `-- thumbnails/
 |-- LICENSE
 `-- README.md
 ```
@@ -114,6 +193,7 @@ seba-robot/
 - `hardware/` contains documentation for the built robot hardware, including electronics, wiring, power distribution, and physical construction.
 - `firmware/stm32/` contains the STM32G474RE PlatformIO firmware.
 - `raspberry-pi/` contains the Raspberry Pi setup tooling, web server, local web authentication, operator control panel, engineering tuner, serial-link backend, NetworkManager hotspot tooling, and systemd service templates.
+- `robot/` contains photos of the completed physical robot, web-interface screenshots, and demo-video thumbnails.
 
 ---
 
